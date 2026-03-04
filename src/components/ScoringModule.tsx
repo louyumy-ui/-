@@ -1,284 +1,251 @@
-import React, { useState } from 'react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar, ResponsiveContainer } from 'recharts';
-import { Star, MessageSquare, Phone, User, Calendar, Play, Pause, Download, ChevronRight, Info, X, MoreHorizontal, UserCircle, Bot } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar, ResponsiveContainer 
+} from 'recharts';
+import { 
+  Star, Phone, User, Calendar, Play, Pause, Download, ChevronRight, 
+  Info, X, MoreHorizontal, UserCircle, Bot, Tag, BarChart3, 
+  MessageSquare, CheckCircle2, AlertCircle, Clock, ShieldCheck,
+  PhoneIncoming, PhoneOff, Timer, Activity
+} from 'lucide-react';
 import { SvgCopyButton } from './SvgCopyButton';
 import { cn } from '../lib/utils';
 
-const SCORE_DATA = [
-  { subject: '合规红线', A: 10, full: 10 },
-  { subject: '接通质量', A: 0, full: 15 },
-  { subject: '客户画像分析', A: 0, full: 20 },
-  { subject: '还款意愿激发', A: 0, full: 25 },
-  { subject: '还款结果闭环', A: 0, full: 30 },
-  { subject: '还款行动落实', A: 0, full: 15 },
+// --- 类型定义 ---
+interface ScoreDetail {
+  subject: string;
+  score: number;
+  full: number;
+  weight: number;
+}
+
+// --- Mock 数据 ---
+const SCORE_DATA: ScoreDetail[] = [
+  { subject: '开场白合规', score: 10, full: 10, weight: 25 },
+  { subject: '语速控制', score: 8.5, full: 10, weight: 25 },
+  { subject: '需求挖掘', score: 7.2, full: 10, weight: 25 },
+  { subject: '异议处理', score: 6.8, full: 10, weight: 25 },
 ];
 
 const CHAT_MESSAGES = [
-  { id: 1, role: 'bot', time: '5.2s', text: '【停顿0.5秒】唯？（轻笑）您好！【停顿0.3秒】（嗯）这里是云蝠智能，（正常换气）有什么可以帮到您的吗？！！', tag: '触发预设开场白' },
-  { id: 2, role: 'user', time: '6.9s', text: '你好，我想要找一下我们的那个ai 外呼的业务。', subText: '触发注意力：输出不要超过 80 字！口语化，符合打电话的特点，有耐心、亲切、不要重复，不要每次都重复先生、女士。' },
-  { id: 3, role: 'bot', time: '1.2s', text: '[嗯]您好！您是想了解AI外呼这块对吧？我们这边主打大模型语音外呼，接通率高、话术自然，能帮您做回访、营销、通知这些～ 需要我详细说说吗？', tag: '触发大模型', footer: '(以上内容由AI生成)' },
-  { id: 4, role: 'user', time: '3.0s', text: '我想了解一下这个收费标准是什么？', subText: '触发注意力：输出不要超过 80 字！口语化，符合打电话的特点，有耐心、亲切、不要重复，不要每次都重复先生、女士。' },
-  { id: 5, role: 'bot', time: '2.4s', text: '[嗯]收费标准分两块哈～ 坐席费和通话费。外呼坐席6988元/年，呼入坐席12888元/年，后面按通话时长计费～ 具体优惠和方案，我让同事微信跟您细说？', tag: '触发大模型', footer: '(以上内容由AI生成)' },
-  { id: 6, role: 'user', time: '2.4s', text: '你好。嗯，那你这个收费标准是怎么做的判断？' },
+  { id: 1, role: 'bot', time: '16:49:47', text: '您好！我是云蝠智能的数字员工姣姣，请问是王先生吗？', tag: '触发预设开场白' },
+  { id: 2, role: 'user', time: '16:49:52', text: '是的，哪位？' },
+  { id: 3, role: 'bot', time: '16:49:55', text: '王先生您好，看到您近期在我们官网咨询过AI外呼系统，想跟您简单沟通下您的业务需求。', tag: '触发大模型' },
+  { id: 4, role: 'user', time: '16:50:05', text: '哦，那个啊，我现在在开会，你晚点再打吧。' },
+  { id: 5, role: 'bot', time: '16:50:10', text: '好的王先生，那不打扰您开会了。我稍后把相关的行业案例发到您手机上，祝您工作顺利！', tag: '结束语合规' },
 ];
 
-export const ScoringModule = () => {
-  const [showDetail, setShowDetail] = useState(false);
+const TICKET_TAGS = ['高意向', '官网咨询', '金融行业', '需二次回访'];
+
+export const ScoringModule: React.FC = () => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [callStatus, setCallStatus] = useState<'connected' | 'unconnected'>('connected');
+
+  const totalScore = useMemo(() => 
+    callStatus === 'unconnected' ? null : SCORE_DATA.reduce((sum, item) => sum + item.score, 0)
+  , [callStatus]);
+
+  const duration = callStatus === 'unconnected' ? '--' : '35秒';
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">外呼管理</h2>
-          <p className="text-slate-500 text-sm mt-1">查看单通通话的详细评分报告与AI分析总结</p>
-        </div>
-        <div className="flex gap-3">
-          <button 
-            onClick={() => setShowDetail(true)}
-            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm font-bold"
-          >
-            <Star size={18} className="text-amber-400 fill-amber-400" />
-            <span>查看评分详情</span>
-          </button>
-          <SvgCopyButton targetId="scoring-container" />
-        </div>
-      </div>
-
-      <div id="scoring-container" className="bg-[#f8fafc] rounded-2xl border border-slate-200 w-[1440px] h-[960px] shadow-sm overflow-hidden flex relative">
-        {/* Left: Chat Interface */}
-        <div className="flex-1 flex flex-col bg-white border-r border-slate-100">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-2">
-              <Phone size={16} className="text-[#0084FF]" />
-              <span className="font-bold text-slate-700">通话记录: 188****4221</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-bold text-slate-500">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                通话中
-              </div>
-              <MoreHorizontal size={18} className="text-slate-400 cursor-pointer" />
-            </div>
+    <div className="flex flex-col h-full bg-slate-50/50" id="scoring-root">
+      {/* 顶部导航 */}
+      <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shadow-sm z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-600 rounded-lg text-white">
+            <ShieldCheck size={20} />
           </div>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">单通对话诊断</h1>
+            <p className="text-xs text-slate-500">基于预设标准对单通通话进行全维度质量评估</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-slate-100 p-1 rounded-lg mr-4">
+            <button 
+              onClick={() => setCallStatus('connected')}
+              className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", callStatus === 'connected' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+            >已接通</button>
+            <button 
+              onClick={() => setCallStatus('unconnected')}
+              className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", callStatus === 'unconnected' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+            >未接通</button>
+          </div>
+          <SvgCopyButton targetId="scoring-diagnosis-area" />
+        </div>
+      </header>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {CHAT_MESSAGES.map((msg) => (
-              <div key={msg.id} className={cn("flex flex-col max-w-[80%]", msg.role === 'bot' ? "ml-auto items-end" : "items-start")}>
-                <div className={cn("flex items-start gap-3", msg.role === 'bot' ? "flex-row-reverse" : "flex-row")}>
-                  <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shadow-sm", msg.role === 'bot' ? "bg-blue-50 text-[#0084FF]" : "bg-slate-100 text-slate-500")}>
-                    {msg.role === 'bot' ? <Bot size={24} /> : <UserCircle size={24} />}
-                  </div>
-                  <div className="space-y-2">
-                    <div className={cn(
-                      "p-4 rounded-2xl text-sm shadow-sm relative",
-                      msg.role === 'bot' ? "bg-[#0084FF] text-white rounded-tr-none" : "bg-slate-50 text-slate-700 border border-slate-100 rounded-tl-none"
-                    )}>
-                      {msg.text}
-                      {msg.tag && (
+      <main className="flex-1 overflow-hidden p-8">
+        <div className="h-full flex gap-8 max-w-7xl mx-auto" id="scoring-diagnosis-area">
+          {/* 左栏：通讯详情 (对话流) */}
+          <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare size={16} className="text-blue-500" />
+                <h3 className="text-sm font-bold text-slate-700">具体对话明细流呈现</h3>
+              </div>
+              {callStatus === 'connected' ? (
+                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold border border-emerald-100">
+                  <CheckCircle2 size={10} /> 呼叫成功 - 已接通
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-bold border border-rose-100">
+                  <PhoneOff size={10} /> 呼叫失败 - 拒接/空号
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30">
+              {callStatus === 'connected' ? (
+                CHAT_MESSAGES.map((msg) => (
+                  <div key={msg.id} className={cn("flex flex-col max-w-[85%]", msg.role === 'bot' ? "ml-auto items-end" : "items-start")}>
+                    <div className={cn("flex items-start gap-3", msg.role === 'bot' ? "flex-row-reverse" : "flex-row")}>
+                      <div className={cn("w-9 h-9 rounded-full flex items-center justify-center shadow-sm border", 
+                        msg.role === 'bot' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-white text-slate-400 border-slate-200")}>
+                        {msg.role === 'bot' ? <Bot size={20} /> : <UserCircle size={20} />}
+                      </div>
+                      <div className="space-y-1.5">
                         <div className={cn(
-                          "absolute -bottom-6 px-2 py-0.5 rounded text-[10px] font-bold",
-                          msg.role === 'bot' ? "right-0 bg-blue-100 text-[#0084FF]" : "left-0 bg-slate-100 text-slate-500"
+                          "p-3.5 rounded-2xl text-sm shadow-sm relative leading-relaxed",
+                          msg.role === 'bot' 
+                            ? "bg-blue-600 text-white rounded-tr-none" 
+                            : "bg-white text-slate-700 border border-slate-200 rounded-tl-none"
                         )}>
-                          {msg.tag}
+                          {msg.text}
+                          {msg.tag && (
+                            <div className={cn(
+                              "absolute -bottom-5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
+                              msg.role === 'bot' ? "right-0 bg-blue-100 text-blue-600" : "left-0 bg-slate-100 text-slate-500"
+                            )}>
+                              {msg.tag}
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <div className={cn("text-[10px] text-slate-400 font-mono", msg.role === 'bot' ? "text-right" : "text-left")}>
+                          {msg.time}
+                        </div>
+                      </div>
                     </div>
-                    {msg.subText && (
-                      <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-[11px] text-blue-600 leading-relaxed italic">
-                        {msg.subText}
-                      </div>
-                    )}
-                    {msg.footer && (
-                      <div className="text-[10px] text-slate-400 mt-1">
-                        {msg.footer}
-                      </div>
-                    )}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-1 self-end">{msg.time}</div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-4">
+                  <PhoneOff size={48} />
+                  <p className="text-sm font-medium">未接通通话，无对话明细</p>
+                </div>
+              )}
+            </div>
+
+            {/* 播放控制条 */}
+            {callStatus === 'connected' && (
+              <div className="p-4 border-t border-slate-100 bg-white">
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-all shadow-md shadow-blue-100"
+                  >
+                    {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+                  </button>
+                  <div className="flex-1 space-y-1">
+                    <div className="h-1.5 bg-slate-100 rounded-full relative overflow-hidden">
+                      <div className="absolute left-0 top-0 h-full w-1/3 bg-blue-500 rounded-full"></div>
+                    </div>
+                    <div className="flex justify-between text-[10px] font-mono font-bold text-slate-400">
+                      <span>00:12</span>
+                      <span>00:35</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            )}
           </div>
 
-          <div className="p-4 border-t border-slate-100 bg-slate-50/30">
-            <div className="flex items-center gap-4">
-              <button className="w-10 h-10 bg-[#0084FF] text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors shadow-md">
-                <Play size={20} fill="currentColor" />
-              </button>
-              <div className="flex-1 h-1.5 bg-slate-200 rounded-full relative overflow-hidden">
-                <div className="absolute left-0 top-0 h-full w-1/4 bg-[#0084FF]"></div>
-              </div>
-              <span className="text-[10px] font-mono font-bold text-slate-500">00:54 / 03:43</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Sidebar Info */}
-        <div className="w-80 bg-white p-6 space-y-8 overflow-y-auto">
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">通话概况</h3>
-            <div className="space-y-3">
-              {[
-                { label: '模型 (ID)', value: '云蝠智能客服姣姣' },
-                { label: '呼叫时间', value: '2026-02-25 16:49:47' },
-                { label: '时长', value: '03:43' },
-                { label: '平均分', value: '1.7 / 19.2', highlight: true },
-                { label: '总分', value: '10.0 / 115.0', highlight: true },
-                { label: '交互轮次', value: '3' },
-                { label: '挂断方', value: '客户', badge: 'bg-rose-50 text-rose-500 border-rose-100' },
-                { label: 'token', value: '25135' },
-                { label: 'TTS', value: '967', info: true },
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 flex items-center gap-1">
-                    {item.label}
-                    {item.info && <Info size={10} className="text-slate-300" />}
+          {/* 右栏：通讯信息 & 维度打分 */}
+          <div className="w-80 flex flex-col gap-6">
+            {/* 通讯信息 */}
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Phone size={14} className="text-blue-500" /> 通讯信息
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                  <span className="text-xs text-slate-500">呼叫结果</span>
+                  <span className={cn("text-xs font-bold", callStatus === 'connected' ? "text-emerald-600" : "text-rose-600")}>
+                    {callStatus === 'connected' ? '成功接通' : '拒接/空号'}
                   </span>
-                  {item.badge ? (
-                    <span className={cn("px-2 py-0.5 rounded border text-[10px] font-bold", item.badge)}>{item.value}</span>
-                  ) : (
-                    <span className={cn("font-bold", item.highlight ? "text-[#0084FF]" : "text-slate-700")}>{item.value}</span>
-                  )}
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                  <span className="text-xs text-slate-500">通话时长</span>
+                  <span className="text-xs font-bold text-slate-700">{duration}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                  <span className="text-xs text-slate-500">挂断原因</span>
+                  <span className="text-xs font-bold text-slate-700">{callStatus === 'connected' ? '客户主动挂断' : '--'}</span>
+                </div>
+              </div>
+            </section>
 
-          <div className="pt-6 border-t border-slate-100 space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <User size={14} />
-              用户信息
-            </h3>
-            <div className="space-y-4">
-              {[
-                { label: '手机号', value: '188****4221' },
-                { label: '公司', value: '其他' },
-                { label: '客户行业', value: '未知' },
-                { label: '客户需求', value: '有意向' },
-              ].map((item, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="text-[10px] text-slate-400">{item.label}</div>
-                  <div className="text-xs font-bold text-slate-700">{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+            {/* 工单标签命中 */}
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Tag size={14} className="text-purple-500" /> 工单标签命中
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {callStatus === 'connected' ? TICKET_TAGS.map((tag, idx) => (
+                  <span key={idx} className="px-2 py-1 bg-purple-50 text-purple-600 rounded text-[10px] font-bold border border-purple-100">
+                    {tag}
+                  </span>
+                )) : <span className="text-xs text-slate-300">--</span>}
+              </div>
+            </section>
 
-        {/* Scoring Detail Overlay */}
-        {showDetail && (
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-12 animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
-                    <Star size={24} fill="currentColor" />
+            {/* 维度打分 */}
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <BarChart3 size={14} className="text-amber-500" /> 维度打分
+                </h3>
+                <span className="text-lg font-black text-blue-600 font-mono">
+                  {totalScore !== null ? totalScore.toFixed(1) : '--'}
+                </span>
+              </div>
+              
+              <div className="space-y-4">
+                {callStatus === 'connected' ? SCORE_DATA.map((item, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="font-bold text-slate-600">{item.subject}</span>
+                      <span className="text-slate-400 font-mono">{item.score}/{item.full}</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                      <div 
+                        className="h-full bg-blue-500 rounded-full transition-all duration-1000" 
+                        style={{ width: `${(item.score / item.full) * 100}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">评分详情</h3>
-                    <p className="text-[10px] text-slate-400">保留小数点后两位</p>
+                )) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-slate-300 space-y-2">
+                    <Activity size={24} />
+                    <p className="text-[10px] font-bold">无评分数据</p>
                   </div>
-                </div>
-                <button 
-                  onClick={() => setShowDetail(false)}
-                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
-                >
-                  <X size={24} />
-                </button>
+                )}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-10 flex gap-12">
-                {/* Left: Score List */}
-                <div className="flex-1 space-y-6">
-                  <div className="space-y-4">
-                    {SCORE_DATA.map((item) => (
-                      <div key={item.subject} className="flex items-center justify-between group">
-                        <div className="w-32 text-sm font-bold text-slate-600">{item.subject}</div>
-                        <div className="flex-1 flex items-center gap-1 mx-4">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star 
-                              key={star} 
-                              size={18} 
-                              className={star <= Math.round((item.A / item.full) * 5) ? "text-amber-400 fill-amber-400" : "text-slate-100"} 
-                            />
-                          ))}
-                        </div>
-                        <div className="w-24 text-right">
-                          <span className="text-sm font-mono font-bold text-[#0084FF]">{item.A.toFixed(2)}</span>
-                          <span className="text-xs text-slate-300 mx-1">/</span>
-                          <span className="text-xs font-mono text-slate-400">{item.full.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-6 border-t border-slate-100 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-600">平均分</span>
-                      <div className="flex items-center gap-4">
-                        <div className="flex gap-0.5">
-                          <Star size={16} className="text-amber-400 fill-amber-400" />
-                          <Star size={16} className="text-slate-100" />
-                          <Star size={16} className="text-slate-100" />
-                          <Star size={16} className="text-slate-100" />
-                          <Star size={16} className="text-slate-100" />
-                        </div>
-                        <span className="text-sm font-mono font-bold text-[#0084FF]">1.7</span>
-                        <span className="text-xs text-slate-300">/ 19.2</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-600">总分</span>
-                      <div className="flex items-center gap-4">
-                        <div className="flex gap-0.5">
-                          <Star size={16} className="text-amber-400 fill-amber-400" />
-                          <Star size={16} className="text-slate-100" />
-                          <Star size={16} className="text-slate-100" />
-                          <Star size={16} className="text-slate-100" />
-                          <Star size={16} className="text-slate-100" />
-                        </div>
-                        <span className="text-sm font-mono font-bold text-[#0084FF]">10.0</span>
-                        <span className="text-xs text-slate-300">/ 115.0</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-slate-100 space-y-2">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase">总结</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      该通话内容为B2B场景下的AI外呼产品销售咨询，非债务催收场景。全程无任何债务人信息、欠款信息、还款协商等内容，不涉及客户还款能力/意愿分析、还款方案设计、行动承诺或结果追踪等催收核心环节。因此，“接通质量”“客户画像分析”“还款意愿激发”“还款行动落实”“还款结果闭环”五个维度均不适用，计0分；“合规红线”维度因全程未出现威胁恐吓、未泄露他人信息、虽无双录证据但通话内容本身无违规言行，且作为销售外呼符合基础合规要求，故给满分10分。
+              {callStatus === 'connected' && (
+                <div className="mt-6 pt-4 border-t border-slate-100">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      <span className="font-bold text-blue-600 mr-1">AI 诊断结论:</span>
+                      该通话整体表现良好，开场白标准，但在需求挖掘环节略显生硬，建议加强同理心表达。
                     </p>
                   </div>
                 </div>
-
-                {/* Right: Radar Chart */}
-                <div className="w-[400px] flex flex-col items-center justify-center border-l border-slate-100 pl-12">
-                  <div className="w-full h-[350px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={SCORE_DATA}>
-                        <PolarGrid stroke="#e2e8f0" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 30]} tick={false} axisLine={false} />
-                        <RechartsRadar
-                          name="Score"
-                          dataKey="A"
-                          stroke="#0084FF"
-                          fill="#0084FF"
-                          fillOpacity={0.4}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="mt-8 text-center">
-                    <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">总分: 10.0 / 115.0</div>
-                    <div className="text-4xl font-black text-[#0084FF]">10.0</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              )}
+            </section>
           </div>
-        )}
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

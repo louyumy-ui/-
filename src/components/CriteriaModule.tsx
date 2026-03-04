@@ -1,66 +1,180 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Info, Settings2, ChevronRight, Search, Filter, MoreHorizontal, ArrowLeft, MessageSquare, PhoneCall, TrendingUp, Settings, Bell, Cloud, ChevronLeft, User, Calendar, Play, Download, Star, BarChart3, Zap, Users, PieChart, Check, Copy } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Plus, Trash2, Info, Settings2, ChevronRight, Search, Filter, 
+  MoreHorizontal, ArrowLeft, MessageSquare, PhoneCall, TrendingUp, 
+  Settings, Bell, Cloud, ChevronLeft, User, Calendar, Play, 
+  Download, Star, BarChart3, Zap, Users, PieChart, Check, Copy,
+  Lock, Unlock, ShieldCheck, LayoutGrid, Library, Save, AlertCircle
+} from 'lucide-react';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, AreaChart, Area, PieChart as RechartsPieChart, Pie
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, PieChart as RechartsPieChart, Pie
 } from 'recharts';
 import { SvgCopyButton } from './SvgCopyButton';
 import { cn } from '../lib/utils';
 
-const SCHEMES = [
-  { id: '1', name: '通用外呼打分方案', creator: '张经理', createTime: '2026-01-15', lastUpdateTime: '2026-03-01', modifier: '张经理', status: '使用中', usageCount: 1240 },
-  { id: '2', name: '金融产品电销方案', creator: '李主管', createTime: '2026-02-10', lastUpdateTime: '2026-02-28', modifier: '李主管', status: '草稿', usageCount: 0 },
-  { id: '3', name: '售后回访质检标准', creator: '王组长', createTime: '2025-12-20', lastUpdateTime: '2026-02-25', modifier: '王组长', status: '使用中', usageCount: 856 },
-  { id: '4', name: '新员工入职话术考核', creator: '张经理', createTime: '2026-01-05', lastUpdateTime: '2026-02-20', modifier: '张经理', status: '已停用', usageCount: 432 },
+// --- 原子维度库 ---
+const ATOMIC_LIBRARY = [
+  { id: 'a1', name: '开场白合规', category: '流程', desc: '是否包含标准问候语、公司名称及身份说明。' },
+  { id: 'a2', name: '语速控制', category: '素质', desc: '语速是否平稳，是否存在过快或过慢情况。' },
+  { id: 'a3', name: '需求挖掘', category: '业务', desc: '是否通过有效提问挖掘客户潜在需求。' },
+  { id: 'a4', name: '异议处理', category: '业务', desc: '面对客户拒绝或疑问时，是否能专业化解。' },
+  { id: 'a5', name: '结束语礼貌', category: '流程', desc: '是否有礼貌的道别及后续服务提醒。' },
+  { id: 'a6', name: '情绪价值', category: '情绪', desc: '通话过程中是否展现出积极、共情的情绪。' },
+  { id: 'a7', name: '产品关键点', category: '业务', desc: '是否准确传达了产品的核心卖点和价格。' },
+  { id: 'a8', name: '禁言规避', category: '合规', desc: '是否避开了行业禁止使用的敏感词汇。' },
 ];
 
-const DEFAULT_CRITERIA = [
-  { id: '1', name: '开场表现', weight: 20.00, desc: '包括握手及对性，能自定轮候次数的授信；自我介绍清晰，清楚报明身份、公司、职位等信息；通话目的明确，开场白语速适中。' },
-  { id: '2', name: '倾听与反馈', weight: 20.00, desc: '专注倾听，不打断客户；准确理解客户意图，能提供关键信息；适时反馈，通过重复、提问等方式确认认领真领与理解。' },
-  { id: '3', name: '产品介绍', weight: 20.00, desc: '信息完整，全面介绍产品关键要素；重点突出，依据客户情况强调独特特点和优势；表述清晰，用语通俗简洁语言，避免专业术语堆砌。' },
-  { id: '4', name: '异议处理', weight: 20.00, desc: '冷静倾听，听完客户异议；理解共情，站在客户角度看问题；解决方案有效，用专业知识化解疑虑；灵活运用沟通技巧。' },
-  { id: '5', name: '综合沟通', weight: 20.00, desc: '客户情绪积极中性，无明显负面情绪；沟通顺畅，双方信息交流自然；结束语礼貌，用语得体留别，留下良好收尾。' },
+// --- 官方套组模板 ---
+const OFFICIAL_TEMPLATES = [
+  { 
+    id: 't1', 
+    name: '金融电销标准套组', 
+    type: 'official',
+    dimensions: [
+      { id: 'a1', weight: 15 },
+      { id: 'a3', weight: 30 },
+      { id: 'a4', weight: 30 },
+      { id: 'a7', weight: 15 },
+      { id: 'a8', weight: 10 },
+    ]
+  },
+  { 
+    id: 't2', 
+    name: '售后回访通用套组', 
+    type: 'official',
+    dimensions: [
+      { id: 'a1', weight: 10 },
+      { id: 'a2', weight: 10 },
+      { id: 'a5', weight: 20 },
+      { id: 'a6', weight: 60 },
+    ]
+  }
 ];
+
+// --- 方案列表数据 ---
+const SCHEMES = [
+  { id: '1', name: '通用外呼打分方案', creator: '张经理', createTime: '2026-01-15 14:20:05', lastUpdateTime: '2026-03-01 09:45:12', modifier: '张经理', status: '使用中' },
+  { id: '2', name: '金融产品电销方案', creator: '李主管', createTime: '2026-02-10 11:30:00', lastUpdateTime: '2026-02-28 16:20:55', modifier: '李主管', status: '草稿' },
+];
+
+interface Dimension {
+  id: string;
+  name: string;
+  weight: number;
+  locked: boolean;
+  desc: string;
+}
 
 export const CriteriaModule = () => {
   const [view, setView] = useState<'list' | 'edit'>('list');
-  const [selectedScheme, setSelectedScheme] = useState<typeof SCHEMES[0] | null>(null);
+  const [editMode, setEditMode] = useState<'template' | 'custom'>('custom');
+  const [selectedScheme, setSelectedScheme] = useState<any>(null);
   const [isTesting, setIsTesting] = useState(false);
-  const [criteria, setCriteria] = useState(DEFAULT_CRITERIA);
+  const [criteria, setCriteria] = useState<Dimension[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [transcript, setTranscript] = useState('客服：您好，我是智策云语的客户经理，请问是张先生吗？\n客户：是的，什么事？\n客服：张先生您好，打扰您了。我们最近针对老客户推出了一项新的授信服务，想跟您简单介绍一下...\n客户：我现在没空，等下再说吧。\n客服：好的张先生，非常抱歉打扰您。那我不耽误您时间了，稍后我把详细资料发到您手机上，您有空可以了解一下。祝您生活愉快！');
-  const [testScores, setTestScores] = useState<Record<string, number>>({
-    '1': 85, '2': 80, '3': 70, '4': 75, '5': 90
-  });
+  const [transcript, setTranscript] = useState('客服：您好，请问是王先生吗？\n客户：是的。\n客服：王先生您好，我是云蝠智能的顾问，看到您咨询过AI系统...');
+  const [testScores, setTestScores] = useState<Record<string, number>>({});
+  const [showSaveToast, setShowSaveToast] = useState(false);
 
-  const handleEdit = (scheme: typeof SCHEMES[0]) => {
+  // --- 权重自动平分逻辑 ---
+  const rebalanceWeights = (currentCriteria: Dimension[], changedId?: string, newWeight?: number) => {
+    if (currentCriteria.length === 0) return [];
+    
+    const totalWeight = 100;
+    const lockedDimensions = currentCriteria.filter(d => d.locked || d.id === changedId);
+    const unlockedDimensions = currentCriteria.filter(d => !d.locked && d.id !== changedId);
+    
+    if (unlockedDimensions.length === 0) {
+      if (changedId) {
+        return currentCriteria.map(d => d.id === changedId ? { ...d, weight: newWeight || d.weight } : d);
+      }
+      return currentCriteria;
+    }
+
+    let lockedTotal = lockedDimensions.reduce((sum, d) => {
+      const w = d.id === changedId ? (newWeight !== undefined ? newWeight : d.weight) : d.weight;
+      return sum + w;
+    }, 0);
+
+    if (lockedTotal > totalWeight) lockedTotal = totalWeight;
+
+    const remaining = totalWeight - lockedTotal;
+    
+    // Distribute remaining weight among unlocked dimensions using integers
+    let distributedSum = 0;
+    const newCriteria = currentCriteria.map(d => {
+      if (d.id === changedId) return { ...d, weight: newWeight !== undefined ? newWeight : d.weight };
+      if (d.locked) return d;
+      
+      let distributedWeight = Math.round(remaining / unlockedDimensions.length);
+      distributedWeight = Math.max(0, distributedWeight);
+      distributedSum += distributedWeight;
+      
+      return { ...d, weight: distributedWeight };
+    });
+
+    // Adjust for rounding errors to ensure total is exactly 100
+    const finalTotal = newCriteria.reduce((sum, d) => sum + d.weight, 0);
+    const diff = totalWeight - finalTotal;
+    
+    if (diff !== 0 && unlockedDimensions.length > 0) {
+      const lastUnlockedId = unlockedDimensions[unlockedDimensions.length - 1].id;
+      return newCriteria.map(d => {
+        if (d.id === lastUnlockedId) {
+          return { ...d, weight: Math.max(0, d.weight + diff) };
+        }
+        return d;
+      });
+    }
+
+    return newCriteria;
+  };
+
+  // --- 切换维度选中状态 (穿梭框逻辑) ---
+  const toggleDimension = (atomicId: string) => {
+    if (editMode === 'template') return; // 模板模式不可增删
+
+    const exists = criteria.find(d => d.id === atomicId);
+    let nextCriteria;
+    if (exists) {
+      nextCriteria = criteria.filter(d => d.id !== atomicId);
+    } else {
+      const atomic = ATOMIC_LIBRARY.find(a => a.id === atomicId)!;
+      nextCriteria = [...criteria, { ...atomic, weight: 0, locked: false }];
+    }
+    
+    const balanced = rebalanceWeights(nextCriteria);
+    setCriteria(balanced);
+    
+    // 自动保存提示
+    setShowSaveToast(true);
+    setTimeout(() => setShowSaveToast(false), 2000);
+  };
+
+  const handleWeightChange = (id: string, weight: number) => {
+    const balanced = rebalanceWeights(criteria, id, weight);
+    setCriteria(balanced);
+  };
+
+  const toggleLock = (id: string) => {
+    setCriteria(prev => prev.map(d => d.id === id ? { ...d, locked: !d.locked } : d));
+  };
+
+  const handleEdit = (scheme: any) => {
     setSelectedScheme(scheme);
     setView('edit');
-    setCriteria(DEFAULT_CRITERIA);
+    // 默认加载一些维度
+    setCriteria(ATOMIC_LIBRARY.slice(0, 4).map(a => ({ ...a, weight: 25, locked: false })));
   };
 
-  const handleScoreChange = (id: string, val: number) => {
-    setTestScores(prev => ({ ...prev, [id]: val }));
-  };
-
-  const handleAddDimension = () => {
-    const newId = (criteria.length + 1).toString();
-    const newDimension = {
-      id: newId,
-      name: `新维度 ${newId}`,
-      weight: 0,
-      desc: '请输入该维度的评分标准描述...'
-    };
-    setCriteria([...criteria, newDimension]);
-    setTestScores(prev => ({ ...prev, [newId]: 50 }));
-  };
-
-  const handleCriteriaChange = (id: string, field: 'weight' | 'desc' | 'name', value: string | number) => {
-    setCriteria(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
-  };
-
-  const handleDeleteDimension = (id: string) => {
-    setCriteria(prev => prev.filter(c => c.id !== id));
+  const selectTemplate = (template: any) => {
+    setEditMode('template');
+    const dims = template.dimensions.map((d: any) => {
+      const atomic = ATOMIC_LIBRARY.find(a => a.id === d.id)!;
+      return { ...atomic, weight: d.weight, locked: false };
+    });
+    setCriteria(dims);
   };
 
   const calculateTotalScore = () => {
@@ -81,10 +195,8 @@ export const CriteriaModule = () => {
     setIsAnalyzing(true);
     setTimeout(() => {
       setIsAnalyzing(false);
-      const newScores = { ...testScores };
-      criteria.forEach(c => {
-        newScores[c.id] = Math.floor(Math.random() * 40) + 60;
-      });
+      const newScores: any = {};
+      criteria.forEach(c => newScores[c.id] = Math.floor(Math.random() * 30) + 70);
       setTestScores(newScores);
     }, 1500);
   };
@@ -94,8 +206,8 @@ export const CriteriaModule = () => {
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">话术管理</h2>
-            <p className="text-slate-500 text-sm mt-1">管理和配置不同业务场景下的通话质检评分模板</p>
+            <h2 className="text-2xl font-bold text-slate-900">评分标准制定</h2>
+            <p className="text-slate-500 text-sm mt-1">配置质检维度、权重及自动化评分逻辑</p>
           </div>
           <div className="flex gap-3">
             <SvgCopyButton targetId="scheme-list-section" />
@@ -106,22 +218,7 @@ export const CriteriaModule = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 mb-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="搜索方案名称、创建人..." 
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#0084FF] outline-none transition-all"
-            />
-          </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-            <Filter size={16} />
-            筛选
-          </button>
-        </div>
-
-        <div id="scheme-list-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm w-[1440px] h-[960px] p-8">
+        <div id="scheme-list-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm p-8 min-h-[600px]">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-200">
@@ -136,35 +233,19 @@ export const CriteriaModule = () => {
             <tbody className="divide-y divide-slate-100">
               {SCHEMES.map((scheme) => (
                 <tr key={scheme.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => handleEdit(scheme)}>
+                  <td className="px-6 py-4 font-bold text-slate-900">{scheme.name}</td>
                   <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900">{scheme.name}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">创建人: {scheme.creator}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      scheme.status === '使用中' ? 'bg-emerald-50 text-emerald-700' : 
-                      scheme.status === '草稿' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        scheme.status === '使用中' ? 'bg-emerald-500' : 
-                        scheme.status === '草稿' ? 'bg-amber-500' : 'bg-slate-400'
-                      }`}></span>
+                    <span className={cn("px-2 py-1 rounded-full text-[10px] font-bold", scheme.status === '使用中' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>
                       {scheme.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{scheme.createTime}</td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{scheme.lastUpdateTime}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">{scheme.modifier}</td>
+                  <td className="px-6 py-4 text-xs text-slate-500 font-mono">{scheme.createTime}</td>
+                  <td className="px-6 py-4 text-xs text-slate-500 font-mono">{scheme.lastUpdateTime}</td>
+                  <td className="px-6 py-4 text-xs text-slate-600 font-bold">{scheme.modifier}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#0084FF] hover:bg-blue-50 rounded-lg transition-colors">
-                        <Settings2 size={14} />
-                        编辑
-                      </button>
-                      <button className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                        <Trash2 size={14} />
-                        删除
-                      </button>
+                      <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"><Settings2 size={16} /></button>
+                      <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -176,264 +257,284 @@ export const CriteriaModule = () => {
     );
   }
 
+  const totalWeight = criteria.reduce((sum, d) => sum + d.weight, 0);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* 顶部操作栏 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setView('list')}
-            className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
+          <button onClick={() => setView('list')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><ArrowLeft size={20} /></button>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{selectedScheme?.name} - 标准制定</h2>
-            <p className="text-slate-500 text-sm mt-1">定义外呼通话的质检维度、权重及详细评分细则</p>
+            <h2 className="text-2xl font-bold text-slate-900">{selectedScheme?.name}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-slate-400">当前模式:</span>
+              <div className="flex bg-slate-100 p-0.5 rounded-lg">
+                <button 
+                  onClick={() => setEditMode('custom')}
+                  className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'custom' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+                >自定义配置</button>
+                <button 
+                  onClick={() => setEditMode('template')}
+                  className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'template' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+                >模板中心</button>
+              </div>
+            </div>
           </div>
         </div>
         <div className="flex gap-3">
+          {showSaveToast && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold animate-in fade-in slide-in-from-top-2">
+              <Check size={14} /> 自定义模板已保存
+            </div>
+          )}
           <button 
             onClick={() => setIsTesting(!isTesting)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-sm font-bold",
-              isTesting ? "bg-amber-500 text-white shadow-amber-200" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-            )}
+            className={cn("flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all shadow-sm", isTesting ? "bg-amber-500 text-white" : "bg-white border border-slate-200 text-slate-600")}
           >
-            <Settings2 size={18} />
-            <span>{isTesting ? "退出测试" : "进入测试模式"}</span>
+            <Zap size={18} /> {isTesting ? "退出测试" : "进入测试模式"}
           </button>
-          <SvgCopyButton targetId="criteria-section" />
-          <button 
-            onClick={handleAddDimension}
-            disabled={isTesting}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-md font-bold",
-              isTesting ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-[#0084FF] text-white hover:bg-blue-600"
-            )}
-          >
-            <Plus size={18} />
-            <span>新增维度</span>
-          </button>
+          <SvgCopyButton targetId="criteria-config-area" />
         </div>
       </div>
 
-      <div id="criteria-section" className={cn(
-        "bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm w-[1440px] h-[960px] p-8 transition-all duration-500",
-        isTesting ? "grid grid-cols-12 gap-8" : "block"
-      )}>
-        {/* Left: Criteria Table */}
-        <div className={cn("space-y-6 overflow-auto pr-2", isTesting ? "col-span-4" : "w-full")}>
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Info size={20} className="text-[#0084FF]" />
-              评分维度配置
-            </h3>
-            {isTesting && (
-              <span className="text-xs font-bold text-[#0084FF] bg-blue-50 px-2 py-1 rounded">测试模式已开启</span>
-            )}
-          </div>
-          
-          <div className="border border-slate-100 rounded-xl overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">维度</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-24">权重</th>
-                  {!isTesting && <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">细则</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {criteria.map((item) => (
-                  <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-4 py-4">
-                      {isTesting ? (
-                        <div className="font-bold text-slate-900 text-sm">{item.name}</div>
-                      ) : (
-                        <input 
-                          type="text"
-                          value={item.name}
-                          onChange={(e) => handleCriteriaChange(item.id, 'name', e.target.value)}
-                          className="w-full bg-transparent border-none focus:ring-0 font-bold text-slate-900 text-sm p-0"
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      {isTesting ? (
-                        <div className="text-sm text-slate-600 font-mono font-bold">{item.weight}%</div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <input 
-                            type="number"
-                            value={item.weight}
-                            onChange={(e) => handleCriteriaChange(item.id, 'weight', parseFloat(e.target.value) || 0)}
-                            className="w-16 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm text-slate-600 font-mono font-bold focus:ring-1 focus:ring-[#0084FF] outline-none"
-                          />
-                          <span className="text-slate-400 text-xs">%</span>
-                        </div>
-                      )}
-                    </td>
-                    {!isTesting && (
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <textarea 
-                            value={item.desc}
-                            onChange={(e) => handleCriteriaChange(item.id, 'desc', e.target.value)}
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-slate-500 leading-relaxed resize-none p-0 min-h-[40px]"
-                          />
-                          <button 
-                            onClick={() => handleDeleteDimension(item.id)}
-                            className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl flex items-center justify-between">
-            <div className="text-sm font-bold text-slate-900">
-              当前总权重: <span className="text-[#0084FF]">100.00%</span>
-            </div>
-            <div className="flex gap-1">
-              {criteria.map((c) => (
-                <div key={c.id} className="w-2 bg-[#0084FF] rounded-full opacity-60" style={{ height: `${Math.max(10, c.weight * 2)}px` }}></div>
-              ))}
-            </div>
-          </div>
-
-          {/* Graphical Representation below table (When not testing) */}
-          {!isTesting && (
-            <div className="grid grid-cols-2 gap-4 mt-8 animate-in fade-in duration-700">
-              <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-4 h-[300px]">
-                <h4 className="text-xs font-bold text-slate-400 uppercase mb-4">权重分布预览</h4>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <Pie
-                      data={criteria}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="weight"
-                    >
-                      {criteria.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#0084FF', '#10b981', '#6366f1', '#f59e0b', '#ec4899'][index % 5]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
+      <div id="criteria-config-area" className="grid grid-cols-12 gap-6 min-h-[800px]">
+        {/* 左侧：原子维度库 / 模板列表 */}
+        <div className="col-span-3 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm overflow-y-auto max-h-[800px]">
+          {editMode === 'custom' ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Library size={18} className="text-blue-500" /> 原子维度库</h3>
+                <span className="text-[10px] font-bold text-slate-400">{ATOMIC_LIBRARY.length} 指标</span>
               </div>
-              <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-4 h-[300px]">
-                <h4 className="text-xs font-bold text-slate-400 uppercase mb-4">维度对比图</h4>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={criteria}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip />
-                    <Bar dataKey="weight" fill="#0084FF" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <input type="text" placeholder="搜索指标..." className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500/20" />
+              </div>
+              <div className="space-y-3">
+                {ATOMIC_LIBRARY.map(item => {
+                  const isSelected = criteria.some(d => d.id === item.id);
+                  return (
+                    <div 
+                      key={item.id}
+                      onClick={() => toggleDimension(item.id)}
+                      className={cn(
+                        "p-4 rounded-xl border-2 cursor-pointer transition-all group",
+                        isSelected ? "border-blue-500 bg-blue-50/50" : "border-slate-50 bg-slate-50 hover:border-slate-200"
+                      )}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-xs font-bold text-slate-700">{item.name}</span>
+                        {isSelected ? <Check size={14} className="text-blue-500" /> : <Plus size={14} className="text-slate-300 group-hover:text-slate-500" />}
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2">{item.desc}</p>
+                      <div className="mt-2 flex gap-2">
+                        <span className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[8px] font-bold text-slate-400 uppercase">{item.category}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><LayoutGrid size={18} className="text-blue-500" /> 行业标准套组</h3>
+              <div className="space-y-4">
+                {OFFICIAL_TEMPLATES.map(tmpl => (
+                  <div 
+                    key={tmpl.id}
+                    onClick={() => selectTemplate(tmpl)}
+                    className="p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 cursor-pointer transition-all group"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold text-slate-700">{tmpl.name}</span>
+                      <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500" />
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {tmpl.dimensions.map(d => (
+                        <span key={d.id} className="px-1.5 py-0.5 bg-slate-100 rounded text-[8px] text-slate-500 font-medium">
+                          {ATOMIC_LIBRARY.find(a => a.id === d.id)?.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* Right: Test Environment (Only in testing mode) */}
-        {isTesting && (
-          <div className="col-span-8 grid grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            {/* Input Area */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <MessageSquare size={16} className="text-[#0084FF]" />
-                通话文本模拟
-              </h4>
-              <div className="relative">
-                <textarea 
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  className="w-full h-[600px] p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#0084FF] focus:bg-white transition-all resize-none shadow-inner font-mono"
-                  placeholder="在此输入通话转写文本进行模拟打分测试..."
-                />
-                {isAnalyzing && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center animate-in fade-in">
-                    <div className="w-12 h-12 border-4 border-[#0084FF] border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="text-sm font-bold text-[#0084FF]">AI 正在深度分析文本...</span>
-                  </div>
-                )}
+        {/* 右侧：权重策略引擎 / 测试环境 */}
+        <div className="col-span-9 space-y-6">
+          {!isTesting ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm h-full flex flex-col">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <Settings2 size={20} className="text-blue-500" />
+                  <h3 className="text-lg font-bold text-slate-800">权重策略引擎</h3>
+                  {editMode === 'template' && (
+                    <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-bold border border-amber-100 flex items-center gap-1">
+                      <AlertCircle size={10} /> 模板模式：维度不可增删
+                    </span>
+                  )}
+                </div>
+                <div className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-black font-mono flex items-center gap-3",
+                  Math.abs(totalWeight - 100) < 0.01 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                )}>
+                  <span>总权重: {Math.round(totalWeight)}%</span>
+                  {Math.abs(totalWeight - 100) < 0.01 ? <ShieldCheck size={18} /> : <AlertCircle size={18} />}
+                </div>
               </div>
-              <div className="flex justify-end">
+
+              {criteria.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200">
+                    <Library size={32} />
+                  </div>
+                  <p className="text-sm font-medium">请从左侧勾选原子维度开始配置</p>
+                </div>
+              ) : (
+                <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+                  {criteria.map(item => (
+                    <div key={item.id} className="p-5 bg-slate-50/50 border border-slate-100 rounded-2xl group hover:bg-white hover:shadow-md transition-all">
+                      <div className="grid grid-cols-12 gap-6 items-center">
+                        <div className="col-span-3">
+                          <div className="text-sm font-bold text-slate-800 mb-1">{item.name}</div>
+                          <div className="text-[10px] text-slate-400 line-clamp-1">{item.desc}</div>
+                        </div>
+                        <div className="col-span-6 flex items-center gap-4">
+                          <input 
+                            type="range" 
+                            min="0" max="100" step="1"
+                            value={item.weight}
+                            onChange={(e) => handleWeightChange(item.id, parseInt(e.target.value))}
+                            className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                          />
+                          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+                            <input 
+                              type="number" 
+                              value={item.weight}
+                              onChange={(e) => handleWeightChange(item.id, parseInt(e.target.value) || 0)}
+                              className="w-12 text-xs font-black text-slate-700 outline-none bg-transparent text-center font-mono"
+                            />
+                            <span className="text-[10px] font-bold text-slate-400">%</span>
+                          </div>
+                        </div>
+                        <div className="col-span-3 flex justify-end items-center gap-3">
+                          <button 
+                            onClick={() => toggleLock(item.id)}
+                            className={cn("p-2 rounded-lg transition-all", item.locked ? "bg-blue-600 text-white shadow-lg" : "bg-white border border-slate-200 text-slate-400 hover:text-blue-500")}
+                          >
+                            {item.locked ? <Lock size={16} /> : <Unlock size={16} />}
+                          </button>
+                          {editMode === 'custom' && (
+                            <button 
+                              onClick={() => toggleDimension(item.id)}
+                              className="p-2 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-xs font-bold text-slate-500">权重分布</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-slate-200 rounded-full"></div>
+                    <span className="text-xs font-bold text-slate-400">剩余待分配</span>
+                  </div>
+                </div>
                 <button 
-                  onClick={handleAnalyze}
-                  disabled={isAnalyzing}
-                  className="px-6 py-2 bg-[#0084FF] text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                  disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
+                  className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
                 >
-                  {isAnalyzing ? "分析中..." : "AI 智能分析"}
+                  <Save size={18} /> 保存并启用方案
                 </button>
               </div>
             </div>
-
-            {/* Result Area */}
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-[#0084FF] to-blue-600 rounded-2xl p-6 text-white shadow-lg text-center space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-widest opacity-80">模拟打分结果</h3>
-                <div className="text-7xl font-black tracking-tighter">{calculateTotalScore()}</div>
-                <div className="inline-flex px-4 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold border border-white/30">
-                  等级: {parseFloat(calculateTotalScore()) >= 85 ? "A (优秀)" : parseFloat(calculateTotalScore()) >= 70 ? "B (良好)" : "C (合格)"}
+          ) : (
+            <div className="grid grid-cols-2 gap-6 h-full">
+              {/* 测试输入 */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><MessageSquare size={18} className="text-blue-500" /> 通话文本模拟</h3>
+                  <button className="text-[10px] font-bold text-blue-600 hover:underline">加载示例</button>
                 </div>
+                <div className="flex-1 relative">
+                  <textarea 
+                    value={transcript}
+                    onChange={(e) => setTranscript(e.target.value)}
+                    className="w-full h-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 font-mono resize-none"
+                    placeholder="请输入通话转写文本..."
+                  />
+                  {isAnalyzing && (
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center animate-in fade-in">
+                      <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+                      <span className="text-xs font-bold text-blue-600">AI 正在深度诊断...</span>
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing}
+                  className="mt-4 w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/10"
+                >
+                  开始智能分析
+                </button>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-                <div className="h-[300px]">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase mb-4">维度得分详情</h4>
-                  <div className="space-y-4 overflow-y-auto max-h-[240px] pr-2">
-                    {criteria.map(item => (
-                      <div key={item.id} className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] font-bold">
-                          <span className="text-slate-500">{item.name}</span>
-                          <span className="text-[#0084FF]">{testScores[item.id] || 0}分</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="0" 
-                          max="100" 
-                          value={testScores[item.id] || 0} 
-                          onChange={(e) => handleScoreChange(item.id, parseInt(e.target.value))}
-                          className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0084FF]"
-                        />
-                      </div>
-                    ))}
+              {/* 测试结果 */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col space-y-6">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-2">综合诊断得分</h4>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-black font-mono">{calculateTotalScore()}</span>
+                    <span className="text-sm font-bold opacity-70">/ 100</span>
+                  </div>
+                  <div className="mt-4 inline-flex px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold backdrop-blur-md border border-white/20">
+                    评级: {parseFloat(calculateTotalScore()) >= 85 ? "A 优秀" : "B 良好"}
                   </div>
                 </div>
 
-                <div className="h-[250px]">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase mb-4">维度分布图</h4>
+                <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">维度得分明细</h4>
+                  {criteria.map(item => (
+                    <div key={item.id} className="space-y-2">
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span className="text-slate-600">{item.name}</span>
+                        <span className="text-blue-600 font-mono">{testScores[item.id] || 0}分</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${testScores[item.id] || 0}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                      <PolarGrid stroke="#e2e8f0" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar
-                        name="Score"
-                        dataKey="A"
-                        stroke="#0084FF"
-                        fill="#0084FF"
-                        fillOpacity={0.4}
-                      />
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                      <PolarGrid stroke="#f1f5f9" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 'bold' }} />
+                      <Radar name="Score" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.5} />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

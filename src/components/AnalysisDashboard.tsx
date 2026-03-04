@@ -1,222 +1,466 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, Legend 
+  LineChart, Line, Legend, BarChart, Bar, ComposedChart, Cell
 } from 'recharts';
 import { 
   TrendingUp, Users, PhoneCall, Clock, ArrowUpRight, ArrowDownRight, 
-  Download, Calendar, Filter, RotateCcw, ChevronDown, MessageSquare
+  Download, Calendar, Filter, RotateCcw, ChevronDown, MessageSquare,
+  Activity, Tag, ShieldCheck, BarChart3, PieChart, LayoutDashboard, Info,
+  ChevronRight, ListFilter, Search, MoreVertical, FileText, CheckCircle2
 } from 'lucide-react';
 import { SvgCopyButton } from './SvgCopyButton';
 import { cn } from '../lib/utils';
 
-const DAILY_DATA = [
-  { date: '2026-02-19(周四)', aiConnect: 120, aiDuration: 450, avgDuration: 3.75, aiCalls: 200, connectRate: '60%', intentRate: '15%', aClass: 12, bClass: 18, abClass: 30, cost: 450, bill: 1200, score: 78, sms: 45 },
-  { date: '2026-02-20(周五)', aiConnect: 145, aiDuration: 520, avgDuration: 3.58, aiCalls: 250, connectRate: '58%', intentRate: '18%', aClass: 15, bClass: 22, abClass: 37, cost: 520, bill: 1500, score: 82, sms: 52 },
-  { date: '2026-02-21(周六)', aiConnect: 85, aiDuration: 310, avgDuration: 3.65, aiCalls: 150, connectRate: '56%', intentRate: '12%', aClass: 8, bClass: 12, abClass: 20, cost: 310, bill: 900, score: 75, sms: 28 },
-  { date: '2026-02-22(周日)', aiConnect: 60, aiDuration: 220, avgDuration: 3.67, aiCalls: 100, connectRate: '60%', intentRate: '10%', aClass: 5, bClass: 8, abClass: 13, cost: 220, bill: 600, score: 72, sms: 15 },
-  { date: '2026-02-23(周一)', aiConnect: 160, aiDuration: 580, avgDuration: 3.62, aiCalls: 280, connectRate: '57%', intentRate: '20%', aClass: 18, bClass: 25, abClass: 43, cost: 580, bill: 1680, score: 85, sms: 60 },
-  { date: '2026-02-24(周二)', aiConnect: 180, aiDuration: 650, avgDuration: 3.61, aiCalls: 300, connectRate: '60%', intentRate: '22%', aClass: 22, bClass: 28, abClass: 50, cost: 650, bill: 1800, score: 88, sms: 72 },
-  { date: '2026-02-25(周三)', aiConnect: 175, aiDuration: 630, avgDuration: 3.60, aiCalls: 290, connectRate: '60%', intentRate: '21%', aClass: 20, bClass: 26, abClass: 46, cost: 630, bill: 1740, score: 86, sms: 68 },
-  { date: '2026-02-26(周四)', aiConnect: 190, aiDuration: 690, avgDuration: 3.63, aiCalls: 320, connectRate: '59%', intentRate: '23%', aClass: 25, bClass: 30, abClass: 55, cost: 690, bill: 1920, score: 90, sms: 75 },
-  { date: '2026-02-27(周五)', aiConnect: 210, aiDuration: 750, avgDuration: 3.57, aiCalls: 350, connectRate: '60%', intentRate: '25%', aClass: 28, bClass: 35, abClass: 63, cost: 750, bill: 2100, score: 92, sms: 85 },
-  { date: '2026-02-28(周六)', aiConnect: 95, aiDuration: 340, avgDuration: 3.58, aiCalls: 160, connectRate: '59%', intentRate: '14%', aClass: 10, bClass: 15, abClass: 25, cost: 340, bill: 960, score: 78, sms: 32 },
+// --- 类型定义 ---
+type GroupId = 'results' | 'efficiency' | 'tags' | 'scores';
+
+interface MetricGroup {
+  id: GroupId;
+  title: string;
+  mainLabel: string;
+  mainValue: string;
+  subMetrics: { label: string; value: string; detail?: string[] }[];
+  color: string;
+  icon: React.ReactNode;
+}
+
+// --- Mock 数据 ---
+const CHART_DATA = [
+  { date: '02-24', total: 1200, connected: 850, rate: 70.8, tags: 450, tag1: 200, tag2: 150, tag3: 100, score: 82.5, s1: 8.5, s2: 8.0, s3: 8.2, busy: 100, empty: 80, poweroff: 100, suspended: 70 },
+  { date: '02-25', total: 1350, connected: 920, rate: 68.1, tags: 520, tag1: 250, tag2: 170, tag3: 100, score: 85.2, s1: 8.8, s2: 8.2, s3: 8.5, busy: 120, empty: 100, poweroff: 110, suspended: 100 },
+  { date: '02-26', total: 1100, connected: 780, rate: 70.9, tags: 380, tag1: 180, tag2: 120, tag3: 80, score: 79.8, s1: 8.0, s2: 7.8, s3: 8.1, busy: 80, empty: 70, poweroff: 90, suspended: 80 },
+  { date: '02-27', total: 1500, connected: 1100, rate: 73.3, tags: 680, tag1: 300, tag2: 230, tag3: 150, score: 88.5, s1: 9.0, s2: 8.7, s3: 8.8, busy: 100, empty: 100, poweroff: 120, suspended: 80 },
+  { date: '02-28', total: 1400, connected: 980, rate: 70.0, tags: 610, tag1: 280, tag2: 200, tag3: 130, score: 86.4, s1: 8.9, s2: 8.4, s3: 8.6, busy: 110, empty: 110, poweroff: 100, suspended: 100 },
+  { date: '03-01', total: 900, connected: 600, rate: 66.7, tags: 250, tag1: 120, tag2: 80, tag3: 50, score: 75.0, s1: 7.8, s2: 7.2, s3: 7.5, busy: 70, empty: 80, poweroff: 80, suspended: 70 },
+  { date: '03-02', total: 1600, connected: 1250, rate: 78.1, tags: 720, tag1: 320, tag2: 210, tag3: 190, score: 91.2, s1: 9.2, s2: 9.0, s3: 9.1, busy: 90, empty: 80, poweroff: 100, suspended: 80 },
 ];
 
-export const AnalysisDashboard = () => {
-  const [activeTab, setActiveTab] = useState('trend');
+const METRIC_GROUPS: MetricGroup[] = [
+  {
+    id: 'results',
+    title: '呼叫结果明细',
+    mainLabel: '拨打总量',
+    mainValue: '1,600',
+    color: 'blue',
+    icon: <PhoneCall size={20} />,
+    subMetrics: [
+      { label: '已接听量', value: '1,250' },
+      { label: '未接通总量', value: '350', detail: ['响铃未接: 120', '空号: 80', '关机: 100', '停机: 50'] }
+    ]
+  },
+  {
+    id: 'efficiency',
+    title: '通话效率明细',
+    mainLabel: '接通率',
+    mainValue: '78.1%',
+    color: 'emerald',
+    icon: <Activity size={20} />,
+    subMetrics: [
+      { label: '接通率', value: '78.1%' },
+      { label: '总通话时长', value: '12.5h' },
+      { label: '平均通话时长', value: '35s' }
+    ]
+  },
+  {
+    id: 'tags',
+    title: '通话标签明细',
+    mainLabel: '工单标签总量',
+    mainValue: '720',
+    color: 'amber',
+    icon: <Tag size={20} />,
+    subMetrics: [
+      { label: '自定义标签 1', value: '320' },
+      { label: '自定义标签 2', value: '210' },
+      { label: '自定义标签 3', value: '150' },
+      { label: '无标签通话量', value: '40' }
+    ]
+  },
+  {
+    id: 'scores',
+    title: '综合质量评分',
+    mainLabel: '综合质量总分',
+    mainValue: '91.2',
+    color: 'purple',
+    icon: <ShieldCheck size={20} />,
+    subMetrics: [
+      { label: '评分维度 1', value: '9.2' },
+      { label: '评分维度 2', value: '8.5' },
+      { label: '评分维度 3', value: '7.8' }
+    ]
+  }
+];
+
+export const AnalysisDashboard: React.FC = () => {
+  const [activeGroups, setActiveGroups] = useState<GroupId[]>(['results', 'scores']);
+  const [timeRange, setTimeRange] = useState('7d');
+  const [compareMode, setCompareMode] = useState<'overall' | 'detailed'>('overall');
+  const [showDetailedCompare, setShowDetailedCompare] = useState(true);
+  const [showOverallCompare, setShowOverallCompare] = useState(true);
+
+  // --- FIFO 联动逻辑 ---
+  const toggleGroup = (id: GroupId) => {
+    setActiveGroups(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(g => g !== id);
+      }
+      const next = [...prev, id];
+      if (next.length > 2) {
+        return next.slice(1); // 移除最早选中的 (FIFO)
+      }
+      return next;
+    });
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <div className="flex bg-white p-1 rounded-lg border border-slate-200">
-            <button 
-              onClick={() => setActiveTab('trend')}
-              className={cn(
-                "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
-                activeTab === 'trend' ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
-              )}
-            >
-              数据趋势
-            </button>
-            <button 
-              onClick={() => setActiveTab('rate')}
-              className={cn(
-                "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
-                activeTab === 'rate' ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
-              )}
-            >
-              接通率
-            </button>
-          </div>
-        </div>
+    <div className="flex flex-col h-full bg-slate-50/50" id="analysis-root">
+      {/* 顶部筛选器 */}
+      <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-600">
-            <Calendar size={16} />
-            <span>2026-01-29 ~ 2026-02-28</span>
+          <div className="p-2 bg-blue-600 rounded-lg text-white">
+            <LayoutDashboard size={20} />
           </div>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-600">
-            <span>我负责的</span>
-            <ChevronDown size={14} />
-          </div>
-          <button className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
-            <Filter size={16} />
-            筛选
-          </button>
-          <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200">
-            <RotateCcw size={18} />
-          </button>
-          <SvgCopyButton targetId="full-analysis-view" />
-        </div>
-      </div>
-
-      <div id="full-analysis-view" className="space-y-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
-        {/* Chart Section */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="flex bg-slate-100 p-1 rounded-md">
-                <button className="px-3 py-1 text-xs font-bold bg-white text-indigo-600 rounded shadow-sm">全部</button>
-                <button className="px-3 py-1 text-xs font-bold text-slate-500">AI</button>
-                <button className="px-3 py-1 text-xs font-bold text-slate-500">人工</button>
-              </div>
-              <div className="text-xs text-slate-400">总通话时长: <span className="text-slate-900 font-bold">4,810s</span></div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="hideNoCalls" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                <label htmlFor="hideNoCalls" className="text-xs text-slate-500">隐藏无呼叫日</label>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={DAILY_DATA}>
-                <defs>
-                  <linearGradient id="colorConnect" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#94a3b8', fontSize: 10 }}
-                  interval={1}
-                />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />
-                <Area name="AI接通量" type="monotone" dataKey="aiConnect" stroke="#4f46e5" strokeWidth={2} fillOpacity={1} fill="url(#colorConnect)" />
-                <Area name="A类客户" type="monotone" dataKey="aClass" stroke="#10b981" strokeWidth={2} fill="transparent" />
-                <Area name="B类客户" type="monotone" dataKey="bClass" stroke="#f59e0b" strokeWidth={2} fill="transparent" />
-                <Area name="综合评分" type="monotone" dataKey="score" stroke="#ef4444" strokeWidth={2} fill="transparent" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 justify-center">
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-indigo-500"></div> AI接通量
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div> A类客户
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-amber-500"></div> B类客户
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-rose-500"></div> 综合评分
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 font-bold">
-              + 短信数量: {DAILY_DATA.reduce((acc, curr) => acc + curr.sms, 0)}
-            </div>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">数据分析大盘</h1>
+            <p className="text-xs text-slate-500">全链路质量评估数据实时监控与多维下钻分析</p>
           </div>
         </div>
-
-        {/* Table Section */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
-            <h3 className="text-sm font-bold text-slate-900">详情数据</h3>
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
-              <Download size={14} />
-              导出数据
-            </button>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                checked={showDetailedCompare}
+                onChange={(e) => setShowDetailedCompare(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+              />
+              <span className="text-[10px] font-bold text-slate-600 group-hover:text-blue-600 transition-colors">展示切片细致数据具体对比</span>
+            </label>
+            <div className="w-px h-4 bg-slate-200"></div>
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                checked={showOverallCompare}
+                onChange={(e) => setShowOverallCompare(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+              />
+              <span className="text-[10px] font-bold text-slate-600 group-hover:text-blue-600 transition-colors">总体数据对比</span>
+            </label>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1200px]">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">日期</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-indigo-600 uppercase">AI接通量</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-emerald-600 uppercase">AI通话时长</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">平均通话时长(s)</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">AI呼叫量</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">AI接通率</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">AB意向客户率</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">A类客户</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">B类客户</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">获客成本</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase">账单消费</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-rose-600 uppercase">综合评分</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {/* Summary Rows */}
-                <tr className="bg-indigo-50/20 font-bold">
-                  <td className="px-4 py-3 text-xs text-slate-900">求和</td>
-                  <td className="px-4 py-3 text-xs text-indigo-600">1,510</td>
-                  <td className="px-4 py-3 text-xs text-emerald-600">5,180</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">3.62</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">2,500</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">60.4%</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">18.2%</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">171</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">229</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">5,180</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">15,120</td>
-                  <td className="px-4 py-3 text-xs text-rose-600">82.4</td>
-                </tr>
-                <tr className="bg-slate-50/30 font-bold">
-                  <td className="px-4 py-3 text-xs text-slate-900">平均</td>
-                  <td className="px-4 py-3 text-xs text-indigo-600">151.0</td>
-                  <td className="px-4 py-3 text-xs text-emerald-600">518.0</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">3.62</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">250.0</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">60.4%</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">18.2%</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">17.1</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">22.9</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">518.0</td>
-                  <td className="px-4 py-3 text-xs text-slate-900">1,512.0</td>
-                  <td className="px-4 py-3 text-xs text-rose-600">82.4</td>
-                </tr>
-                {/* Data Rows */}
-                {DAILY_DATA.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.date}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-indigo-600">{row.aiConnect}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-emerald-600">{row.aiDuration}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.avgDuration}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.aiCalls}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.connectRate}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.intentRate}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.aClass}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.bClass}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.cost}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{row.bill}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-rose-600">{row.score}</td>
+
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            {['日', '月', '年', '自定义'].map(r => (
+              <button 
+                key={r}
+                className={cn("px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all", timeRange === r ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+                onClick={() => setTimeRange(r)}
+              >{r}</button>
+            ))}
+          </div>
+          <SvgCopyButton targetId="analysis-content-area" />
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto p-8 space-y-8" id="analysis-content-area">
+        <div className="w-[1440px] mx-auto space-y-8">
+          {/* 2x2 核心指标矩阵 */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* 左侧：客观结果组 */}
+            <div className="grid grid-cols-2 gap-4">
+              {METRIC_GROUPS.slice(0, 2).map((group) => {
+                const isActive = activeGroups.includes(group.id);
+                return (
+                  <div 
+                    key={group.id}
+                    onClick={() => toggleGroup(group.id)}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 group relative overflow-hidden",
+                      isActive ? "border-blue-500 bg-white shadow-xl shadow-blue-100 -translate-y-1" : "border-white bg-white shadow-sm hover:border-slate-200"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white" : "bg-slate-50 text-slate-400")}>
+                        {group.icon}
+                      </div>
+                      {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
+                    </div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{group.title}</h4>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <span className="text-2xl font-black text-slate-800 font-mono">{group.mainValue}</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{group.mainLabel}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {group.subMetrics.map((sm, i) => (
+                        <div key={i} className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-slate-500">{sm.label}</span>
+                            <span className="text-[10px] font-bold text-slate-700">{sm.value}</span>
+                          </div>
+                          {sm.detail && showDetailedCompare && (
+                            <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
+                              {sm.detail.map((d, j) => (
+                                <span key={j} className="text-[9px] text-slate-400">{d}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 右侧：质量评估组 */}
+            <div className="grid grid-cols-2 gap-4">
+              {METRIC_GROUPS.slice(2, 4).map((group) => {
+                const isActive = activeGroups.includes(group.id);
+                return (
+                  <div 
+                    key={group.id}
+                    onClick={() => toggleGroup(group.id)}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 group relative overflow-hidden",
+                      isActive ? "border-blue-500 bg-white shadow-xl shadow-blue-100 -translate-y-1" : "border-white bg-white shadow-sm hover:border-slate-200"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white" : "bg-slate-50 text-slate-400")}>
+                        {group.icon}
+                      </div>
+                      {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
+                    </div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{group.title}</h4>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <span className="text-2xl font-black text-slate-800 font-mono">{group.mainValue}</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{group.mainLabel}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {group.subMetrics.map((sm, i) => (
+                        <div key={i} className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-slate-500">{sm.label}</span>
+                            <span className="text-[10px] font-bold text-slate-700">{sm.value}</span>
+                          </div>
+                          {sm.detail && showDetailedCompare && (
+                            <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
+                              {sm.detail.map((d, j) => (
+                                <span key={j} className="text-[9px] text-slate-400">{d}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 可视化趋势区 */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <TrendingUp size={18} className="text-blue-500" />
+                <h3 className="text-sm font-bold text-slate-700">联动式主图表 (双 Y 轴)</h3>
+                <div className="flex gap-2 ml-4">
+                  {activeGroups.map(id => (
+                    <span key={id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold border border-blue-100">
+                      {METRIC_GROUPS.find(g => g.id === id)?.title}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                  <div className="w-3 h-3 bg-blue-500 rounded"></div> 左轴: 数值型 (柱状)
+                </div>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div> 右轴: 比率/分值 (波浪)
+                </div>
+              </div>
+            </div>
+
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={CHART_DATA}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} />
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '11px', paddingBottom: '20px', fontWeight: 'bold' }} />
+                  
+                  {/* 联动渲染逻辑 */}
+                  {activeGroups.includes('results') && (
+                    <>
+                      {showOverallCompare && !showDetailedCompare && (
+                        <Bar yAxisId="left" name="拨打总量" dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+                      )}
+                      {showDetailedCompare && (
+                        <>
+                          <Bar yAxisId="left" name="已接听" dataKey="connected" stackId="a" fill="#3b82f6" barSize={30} />
+                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#93c5fd" barSize={30} />
+                          <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#bfdbfe" barSize={30} />
+                          <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#dbeafe" barSize={30} />
+                          <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#eff6ff" radius={[4, 4, 0, 0]} barSize={30} />
+                        </>
+                      )}
+                    </>
+                  )}
+                  {activeGroups.includes('tags') && (
+                    <>
+                      {showOverallCompare && !showDetailedCompare && (
+                        <Bar yAxisId="left" name="标签总量" dataKey="tags" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={30} />
+                      )}
+                      {showDetailedCompare && (
+                        <>
+                          <Bar yAxisId="left" name="自定义标签 1" dataKey="tag1" stackId="b" fill="#f59e0b" barSize={30} />
+                          <Bar yAxisId="left" name="自定义标签 2" dataKey="tag2" stackId="b" fill="#fbbf24" barSize={30} />
+                          <Bar yAxisId="left" name="自定义标签 3" dataKey="tag3" stackId="b" fill="#fcd34d" radius={[4, 4, 0, 0]} barSize={30} />
+                        </>
+                      )}
+                    </>
+                  )}
+                  {activeGroups.includes('efficiency') && <Area yAxisId="right" name="接通率" type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} fillOpacity={0.1} fill="#10b981" />}
+                  {activeGroups.includes('scores') && (
+                    <>
+                      {showOverallCompare && !showDetailedCompare && (
+                        <Area yAxisId="right" name="综合得分" type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} fillOpacity={0.1} fill="#8b5cf6" />
+                      )}
+                      {showDetailedCompare && (
+                        <>
+                          <Area yAxisId="right" name="评分维度 1" type="monotone" dataKey="s1" stroke="#8b5cf6" strokeWidth={2} fillOpacity={0.05} fill="#8b5cf6" />
+                          <Area yAxisId="right" name="评分维度 2" type="monotone" dataKey="s2" stroke="#a78bfa" strokeWidth={2} fillOpacity={0.05} fill="#a78bfa" />
+                          <Area yAxisId="right" name="评分维度 3" type="monotone" dataKey="s3" stroke="#c4b5fd" strokeWidth={2} fillOpacity={0.05} fill="#c4b5fd" />
+                        </>
+                      )}
+                    </>
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* 联动详情区 */}
+          <div className="space-y-8">
+            {activeGroups.includes('tags') && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-in slide-in-from-bottom-4">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <Tag size={18} className="text-purple-500" />
+                    <h3 className="text-sm font-bold text-slate-700">工单业务视图</h3>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-6">
+                  {['高意向', '官网咨询', '售后诉求', '无标签'].map((label, i) => (
+                    <div key={label} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</div>
+                      <div className="text-xl font-black text-slate-800 font-mono">{[320, 210, 150, 40][i]}</div>
+                      <div className="mt-2 h-1 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500" style={{ width: `${[45, 30, 20, 5][i]}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeGroups.includes('scores') && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-in slide-in-from-bottom-4">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck size={18} className="text-amber-500" />
+                    <h3 className="text-sm font-bold text-slate-700">质检诊断视图</h3>
+                  </div>
+                </div>
+                <div className="grid grid-cols-12 gap-8">
+                  <div className="col-span-5 space-y-6">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">子维度对比</h4>
+                    {['开场白合规', '语速控制', '需求挖掘', '异议处理'].map((dim, i) => (
+                      <div key={dim} className="space-y-2">
+                        <div className="flex justify-between text-[11px] font-bold">
+                          <span className="text-slate-600">{dim}</span>
+                          <span className="text-blue-600 font-mono">{[9.2, 8.5, 7.8, 7.2][i]}</span>
+                        </div>
+                        <div className="h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${[92, 85, 78, 72][i]}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="col-span-7">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">详细打分数据表</h4>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase">
+                          <th className="px-4 py-3">日期</th>
+                          <th className="px-4 py-3">通话ID</th>
+                          <th className="px-4 py-3">得分</th>
+                          <th className="px-4 py-3">主要扣分项</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {[1, 2, 3].map(i => (
+                          <tr key={i} className="text-[11px] text-slate-600">
+                            <td className="px-4 py-3">03-02</td>
+                            <td className="px-4 py-3 font-mono">CALL_9823{i}</td>
+                            <td className="px-4 py-3 font-bold text-blue-600">92.5</td>
+                            <td className="px-4 py-3">需求挖掘深度不足</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 底部明细数据 (子母表) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-700">每日明细数据明细</h3>
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold border border-slate-200">
+                <Download size={14} /> 导出报表
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-4">日期</th>
+                    <th className="px-6 py-4">拨打总量</th>
+                    <th className="px-6 py-4">接通率</th>
+                    <th className="px-6 py-4">标签总量</th>
+                    <th className="px-6 py-4">平均得分</th>
+                    <th className="px-6 py-4 text-right">操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {CHART_DATA.map((row, i) => (
+                    <React.Fragment key={i}>
+                      <tr className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-6 py-4 text-xs font-bold text-slate-700">{row.date}</td>
+                        <td className="px-6 py-4 text-xs font-mono">{row.total}</td>
+                        <td className="px-6 py-4 text-xs font-mono text-emerald-600">{row.rate}%</td>
+                        <td className="px-6 py-4 text-xs font-mono">{row.tags}</td>
+                        <td className="px-6 py-4 text-xs font-mono text-blue-600">{row.score}</td>
+                        <td className="px-6 py-4 text-right">
+                          <button className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors">
+                            <ChevronDown size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
