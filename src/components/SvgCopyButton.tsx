@@ -36,6 +36,7 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
       paddingLeft: parseFloat(style.paddingLeft) || 0,
       paddingRight: parseFloat(style.paddingRight) || 0,
       paddingBottom: parseFloat(style.paddingBottom) || 0,
+      textAlign: style.textAlign,
     };
   };
 
@@ -53,7 +54,6 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
 
     // Special handling for SVG elements (icons)
     if (element instanceof SVGElement && element.tagName.toLowerCase() === 'svg') {
-      // Clone the SVG content but adjust its position
       const innerContent = Array.from(element.childNodes)
         .map(node => {
           if (node instanceof Element) {
@@ -68,15 +68,16 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
 
     // Background Rect for HTMLElements
     if (element instanceof HTMLElement) {
-      if (styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && styles.backgroundColor !== 'transparent') {
-        const rx = parseFloat(styles.borderRadius) || 0;
-        svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="${styles.backgroundColor}" rx="${rx}" fill-opacity="${styles.opacity}" />`);
-      }
+      const hasBackground = styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && styles.backgroundColor !== 'transparent';
+      const hasBorder = parseFloat(styles.borderWidth) > 0;
 
-      // Border
-      if (parseFloat(styles.borderWidth) > 0) {
+      if (hasBackground || hasBorder) {
         const rx = parseFloat(styles.borderRadius) || 0;
-        svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="none" stroke="${styles.borderColor}" stroke-width="${styles.borderWidth}" rx="${rx}" stroke-opacity="${styles.opacity}" />`);
+        const fill = hasBackground ? styles.backgroundColor : 'none';
+        const stroke = hasBorder ? styles.borderColor : 'none';
+        const strokeWidth = hasBorder ? styles.borderWidth : '0';
+        
+        svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
       }
     }
 
@@ -85,10 +86,19 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
         const text = node.textContent.trim();
         const fontSize = parseFloat(styles.fontSize);
-        const tx = styles.paddingLeft;
-        const ty = styles.paddingTop + fontSize * 0.85; // Better baseline approximation for Figma
         
-        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family="${styles.fontFamily}" font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" dominant-baseline="alphabetic">${text}</text>`);
+        let tx = styles.paddingLeft;
+        let ty = styles.paddingTop + fontSize * 0.85; 
+        
+        if (styles.textAlign === 'center') {
+          tx = styles.width / 2;
+        } else if (styles.textAlign === 'right') {
+          tx = styles.width - styles.paddingRight;
+        }
+
+        const textAnchor = styles.textAlign === 'center' ? 'middle' : (styles.textAlign === 'right' ? 'end' : 'start');
+        
+        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family="${styles.fontFamily}" font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" text-anchor="${textAnchor}" dominant-baseline="alphabetic">${text}</text>`);
       }
     }
 
@@ -118,11 +128,7 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
   ${contentSvg}
 </svg>`.trim();
 
-      // For Figma, it's often better to wrap in an extra layer or ensure it's a valid standalone SVG string
-      const fullBlob = new Blob([svgContent], { type: 'image/svg+xml' });
-      
-      if (navigator.clipboard && navigator.clipboard.write) {
-        // Try writing as both text and blob if possible, but text is usually enough for Figma to recognize as SVG
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(svgContent);
       } else {
         const textArea = document.createElement("textarea");

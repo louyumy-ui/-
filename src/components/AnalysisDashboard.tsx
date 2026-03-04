@@ -67,7 +67,7 @@ const METRIC_GROUPS: MetricGroup[] = [
     title: '通话标签明细',
     mainLabel: '工单标签总量',
     mainValue: '720',
-    color: 'amber',
+    color: 'rose',
     icon: <Tag size={20} />,
     subMetrics: [
       { label: '自定义标签 1', value: '320' },
@@ -81,7 +81,7 @@ const METRIC_GROUPS: MetricGroup[] = [
     title: '综合质量评分',
     mainLabel: '综合质量总分',
     mainValue: '91.2',
-    color: 'purple',
+    color: 'indigo',
     icon: <ShieldCheck size={20} />,
     subMetrics: [
       { label: '评分维度 1', value: '9.2' },
@@ -94,9 +94,7 @@ const METRIC_GROUPS: MetricGroup[] = [
 export const AnalysisDashboard: React.FC = () => {
   const [activeGroups, setActiveGroups] = useState<GroupId[]>(['results', 'scores']);
   const [timeRange, setTimeRange] = useState('7d');
-  const [compareMode, setCompareMode] = useState<'overall' | 'detailed'>('overall');
-  const [showDetailedCompare, setShowDetailedCompare] = useState(true);
-  const [showOverallCompare, setShowOverallCompare] = useState(true);
+  const [compareMode, setCompareMode] = useState<'overall' | 'detailed'>('detailed');
 
   // --- FIFO 联动逻辑 ---
   const toggleGroup = (id: GroupId) => {
@@ -117,35 +115,27 @@ export const AnalysisDashboard: React.FC = () => {
       {/* 顶部筛选器 */}
       <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-lg text-white">
+          <div className="p-2 bg-[#0084FF] rounded-lg text-white shadow-md shadow-blue-200">
             <LayoutDashboard size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-800">数据分析大盘</h1>
+            <h1 className="text-lg font-bold text-slate-900">数据分析大盘</h1>
             <p className="text-xs text-slate-500">全链路质量评估数据实时监控与多维下钻分析</p>
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                checked={showDetailedCompare}
-                onChange={(e) => setShowDetailedCompare(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
-              />
-              <span className="text-[10px] font-bold text-slate-600 group-hover:text-blue-600 transition-colors">展示切片细致数据具体对比</span>
-            </label>
-            <div className="w-px h-4 bg-slate-200"></div>
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                checked={showOverallCompare}
-                onChange={(e) => setShowOverallCompare(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
-              />
-              <span className="text-[10px] font-bold text-slate-600 group-hover:text-blue-600 transition-colors">总体数据对比</span>
-            </label>
+          <div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100">
+            <span className={cn("text-[10px] font-bold transition-colors", compareMode === 'overall' ? "text-blue-600" : "text-slate-400")}>总体数据</span>
+            <button 
+              onClick={() => setCompareMode(compareMode === 'overall' ? 'detailed' : 'overall')}
+              className="w-10 h-5 bg-slate-200 rounded-full relative transition-all overflow-hidden border border-slate-300"
+            >
+              <div className={cn(
+                "absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-all duration-300",
+                compareMode === 'overall' ? "left-0.5" : "left-5.5 bg-blue-600"
+              )}></div>
+            </button>
+            <span className={cn("text-[10px] font-bold transition-colors", compareMode === 'detailed' ? "text-blue-600" : "text-slate-400")}>切片细致数据</span>
           </div>
 
           <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -179,7 +169,7 @@ export const AnalysisDashboard: React.FC = () => {
                     )}
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white" : "bg-slate-50 text-slate-400")}>
+                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-50 text-slate-400")}>
                         {group.icon}
                       </div>
                       {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
@@ -196,7 +186,7 @@ export const AnalysisDashboard: React.FC = () => {
                             <span className="text-[10px] text-slate-500">{sm.label}</span>
                             <span className="text-[10px] font-bold text-slate-700">{sm.value}</span>
                           </div>
-                          {sm.detail && showDetailedCompare && (
+                          {sm.detail && compareMode === 'detailed' && (
                             <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
                               {sm.detail.map((d, j) => (
                                 <span key={j} className="text-[9px] text-slate-400">{d}</span>
@@ -225,7 +215,7 @@ export const AnalysisDashboard: React.FC = () => {
                     )}
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white" : "bg-slate-50 text-slate-400")}>
+                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-50 text-slate-400")}>
                         {group.icon}
                       </div>
                       {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
@@ -242,7 +232,7 @@ export const AnalysisDashboard: React.FC = () => {
                             <span className="text-[10px] text-slate-500">{sm.label}</span>
                             <span className="text-[10px] font-bold text-slate-700">{sm.value}</span>
                           </div>
-                          {sm.detail && showDetailedCompare && (
+                          {sm.detail && compareMode === 'detailed' && (
                             <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
                               {sm.detail.map((d, j) => (
                                 <span key={j} className="text-[9px] text-slate-400">{d}</span>
@@ -289,36 +279,40 @@ export const AnalysisDashboard: React.FC = () => {
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} />
                   <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                   <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)', padding: '16px' }}
+                    itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
+                    labelStyle={{ fontSize: '12px', fontWeight: 'black', color: '#1e293b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}
+                  />
                   <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '11px', paddingBottom: '20px', fontWeight: 'bold' }} />
                   
                   {/* 联动渲染逻辑 */}
                   {activeGroups.includes('results') && (
                     <>
-                      {showOverallCompare && !showDetailedCompare && (
+                      {compareMode === 'overall' && (
                         <Bar yAxisId="left" name="拨打总量" dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
                       )}
-                      {showDetailedCompare && (
+                      {compareMode === 'detailed' && (
                         <>
                           <Bar yAxisId="left" name="已接听" dataKey="connected" stackId="a" fill="#3b82f6" barSize={30} />
-                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#93c5fd" barSize={30} />
-                          <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#bfdbfe" barSize={30} />
-                          <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#dbeafe" barSize={30} />
-                          <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#eff6ff" radius={[4, 4, 0, 0]} barSize={30} />
+                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#60a5fa" barSize={30} />
+                          <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#93c5fd" barSize={30} />
+                          <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#bfdbfe" barSize={30} />
+                          <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#dbeafe" radius={[4, 4, 0, 0]} barSize={30} />
                         </>
                       )}
                     </>
                   )}
                   {activeGroups.includes('tags') && (
                     <>
-                      {showOverallCompare && !showDetailedCompare && (
-                        <Bar yAxisId="left" name="标签总量" dataKey="tags" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={30} />
+                      {compareMode === 'overall' && (
+                        <Bar yAxisId="left" name="标签总量" dataKey="tags" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={30} />
                       )}
-                      {showDetailedCompare && (
+                      {compareMode === 'detailed' && (
                         <>
-                          <Bar yAxisId="left" name="自定义标签 1" dataKey="tag1" stackId="b" fill="#f59e0b" barSize={30} />
-                          <Bar yAxisId="left" name="自定义标签 2" dataKey="tag2" stackId="b" fill="#fbbf24" barSize={30} />
-                          <Bar yAxisId="left" name="自定义标签 3" dataKey="tag3" stackId="b" fill="#fcd34d" radius={[4, 4, 0, 0]} barSize={30} />
+                          <Bar yAxisId="left" name="自定义标签 1" dataKey="tag1" stackId="b" fill="#f43f5e" barSize={30} />
+                          <Bar yAxisId="left" name="自定义标签 2" dataKey="tag2" stackId="b" fill="#fb7185" barSize={30} />
+                          <Bar yAxisId="left" name="自定义标签 3" dataKey="tag3" stackId="b" fill="#fda4af" radius={[4, 4, 0, 0]} barSize={30} />
                         </>
                       )}
                     </>
@@ -326,14 +320,14 @@ export const AnalysisDashboard: React.FC = () => {
                   {activeGroups.includes('efficiency') && <Area yAxisId="right" name="接通率" type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} fillOpacity={0.1} fill="#10b981" />}
                   {activeGroups.includes('scores') && (
                     <>
-                      {showOverallCompare && !showDetailedCompare && (
-                        <Area yAxisId="right" name="综合得分" type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} fillOpacity={0.1} fill="#8b5cf6" />
+                      {compareMode === 'overall' && (
+                        <Area yAxisId="right" name="综合得分" type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} fillOpacity={0.1} fill="#6366f1" />
                       )}
-                      {showDetailedCompare && (
+                      {compareMode === 'detailed' && (
                         <>
-                          <Area yAxisId="right" name="评分维度 1" type="monotone" dataKey="s1" stroke="#8b5cf6" strokeWidth={2} fillOpacity={0.05} fill="#8b5cf6" />
-                          <Area yAxisId="right" name="评分维度 2" type="monotone" dataKey="s2" stroke="#a78bfa" strokeWidth={2} fillOpacity={0.05} fill="#a78bfa" />
-                          <Area yAxisId="right" name="评分维度 3" type="monotone" dataKey="s3" stroke="#c4b5fd" strokeWidth={2} fillOpacity={0.05} fill="#c4b5fd" />
+                          <Area yAxisId="right" name="评分维度 1" type="monotone" dataKey="s1" stroke="#6366f1" strokeWidth={2} fillOpacity={0.05} fill="#6366f1" />
+                          <Area yAxisId="right" name="评分维度 2" type="monotone" dataKey="s2" stroke="#818cf8" strokeWidth={2} fillOpacity={0.05} fill="#818cf8" />
+                          <Area yAxisId="right" name="评分维度 3" type="monotone" dataKey="s3" stroke="#a5b4fc" strokeWidth={2} fillOpacity={0.05} fill="#a5b4fc" />
                         </>
                       )}
                     </>

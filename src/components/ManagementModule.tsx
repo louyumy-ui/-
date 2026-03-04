@@ -11,10 +11,10 @@ import { cn } from '../lib/utils';
 
 // --- Mock 数据 ---
 const INITIAL_ATOMIC_TAGS = [
-  { id: 'a1', name: '开场白合规', category: '流程', status: 'active', modifier: '张经理', lastUpdate: '2026-03-01' },
-  { id: 'a2', name: '语速控制', category: '素质', status: 'active', modifier: '李主管', lastUpdate: '2026-02-15' },
-  { id: 'a3', name: '需求挖掘', category: '业务', status: 'active', modifier: '王组长', lastUpdate: '2026-03-02' },
-  { id: 'a4', name: '情绪价值', category: '情绪', status: 'active', modifier: '张经理', lastUpdate: '2026-02-20' },
+  { id: 'a1', name: '开场白合规', category: '流程', status: 'active', modifier: '张经理', lastUpdate: '2026-03-01 14:20:05' },
+  { id: 'a2', name: '语速控制', category: '素质', status: 'active', modifier: '李主管', lastUpdate: '2026-02-15 09:12:33' },
+  { id: 'a3', name: '需求挖掘', category: '业务', status: 'active', modifier: '王组长', lastUpdate: '2026-03-02 16:45:12' },
+  { id: 'a4', name: '情绪价值', category: '情绪', status: 'active', modifier: '张经理', lastUpdate: '2026-02-20 11:30:00' },
 ];
 
 const CATEGORIES = ['流程', '业务', '素质', '情绪', '合规', '服务'];
@@ -26,9 +26,9 @@ const SCRIPT_ASSOCIATIONS = [
 ];
 
 const OFFICIAL_SETS = [
-  { id: 'set1', name: '金融电销标准套组', dimensions: 8, lastUpdate: '2026-03-01', status: 'published' },
-  { id: 'set2', name: '售后回访通用套组', dimensions: 6, lastUpdate: '2026-02-28', status: 'published' },
-  { id: 'set3', name: '高潜客户挖掘套组', dimensions: 10, lastUpdate: '2026-03-02', status: 'draft' },
+  { id: 'set1', name: '金融电销标准套组', dimensions: 8, lastUpdate: '2026-03-01 14:20:05', status: 'published' },
+  { id: 'set2', name: '售后回访通用套组', dimensions: 6, lastUpdate: '2026-02-28 09:12:33', status: 'published' },
+  { id: 'set3', name: '高潜客户挖掘套组', dimensions: 10, lastUpdate: '2026-03-02 16:45:12', status: 'draft' },
 ];
 
 export const ManagementModule = () => {
@@ -38,6 +38,7 @@ export const ManagementModule = () => {
   const [tags, setTags] = useState(INITIAL_ATOMIC_TAGS);
   const [categories, setCategories] = useState(CATEGORIES);
   const [catSearch, setCatSearch] = useState('');
+  const [showAdvancedAI, setShowAdvancedAI] = useState(false);
 
   const handleEdit = (tag: any) => {
     setEditingTag(tag);
@@ -45,13 +46,16 @@ export const ManagementModule = () => {
   };
 
   const handleCreate = () => {
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    
     setEditingTag({ 
       id: `new-${Date.now()}`, 
       name: '', 
       category: '业务', 
       status: 'draft', 
       modifier: '当前用户',
-      lastUpdate: new Date().toISOString().split('T')[0] 
+      lastUpdate: timestamp
     });
     setView('edit');
   };
@@ -217,49 +221,65 @@ export const ManagementModule = () => {
 
                 <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <Settings2 size={16} className="text-blue-500" />
-                      AI 识别逻辑配置 (技术实现)
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <Settings2 size={16} className="text-blue-500" />
+                        AI 识别逻辑配置 (技术实现)
+                      </h4>
+                      <button 
+                        onClick={() => setShowAdvancedAI(!showAdvancedAI)}
+                        className={cn("px-2 py-0.5 rounded text-[9px] font-bold transition-all border", showAdvancedAI ? "bg-blue-600 text-white border-blue-600" : "bg-white text-blue-600 border-blue-200")}
+                      >
+                        {showAdvancedAI ? "隐藏高级配置" : "开启高级配置"}
+                      </button>
+                    </div>
                     <div className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-bold">
                       <Info size={12} />
                       样例参考
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
-                            <Tag size={16} />
+                  {showAdvancedAI ? (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
+                              <Tag size={16} />
+                            </div>
+                            <span className="text-sm font-bold text-slate-700">关键词匹配</span>
                           </div>
-                          <span className="text-sm font-bold text-slate-700">关键词匹配</span>
+                          <button className="text-xs text-blue-600 font-bold">配置规则</button>
                         </div>
-                        <button className="text-xs text-blue-600 font-bold">配置规则</button>
+                        <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="font-bold text-slate-700">配置样例：</span>
+                          <code className="ml-1 text-blue-600">("您好" | "你好") & ("工号" | "很高兴为您服务")</code>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                        <span className="font-bold text-slate-700">配置样例：</span>
-                        <code className="ml-1 text-blue-600">("您好" | "你好") & ("工号" | "很高兴为您服务")</code>
-                      </div>
-                    </div>
 
-                    <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
-                            <MessageSquare size={16} />
+                      <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
+                              <MessageSquare size={16} />
+                            </div>
+                            <span className="text-sm font-bold text-slate-700">语义理解 (LLM)</span>
                           </div>
-                          <span className="text-sm font-bold text-slate-700">语义理解 (LLM)</span>
+                          <button className="text-xs text-blue-600 font-bold">配置 Prompt</button>
                         </div>
-                        <button className="text-xs text-blue-600 font-bold">配置 Prompt</button>
-                      </div>
-                      <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                        <span className="font-bold text-slate-700">Prompt 样例：</span>
-                        <p className="mt-1 italic opacity-80">"请根据上述[判断标准]，分析通话文本中坐席是否达标..."</p>
+                        <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span className="font-bold text-slate-700">Prompt 样例：</span>
+                          <p className="mt-1 italic opacity-80">"请根据上述[判断标准]，分析通话文本中坐席是否达标..."</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-8 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 space-y-2">
+                      <AlertCircle size={24} />
+                      <p className="text-xs font-medium">已根据[维度描述]与[判断标准]自动关联基础识别逻辑</p>
+                      <button onClick={() => setShowAdvancedAI(true)} className="text-[10px] font-bold text-blue-600 hover:underline">需要手动干预技术实现？</button>
+                    </div>
+                  )}
                 </div>
               </div>
 
