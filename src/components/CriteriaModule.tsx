@@ -203,14 +203,14 @@ export const CriteriaModule = () => {
 
   if (view === 'list') {
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div id="criteria-root" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">评分标准制定</h2>
             <p className="text-slate-500 text-sm mt-1">配置质检维度、权重及自动化评分逻辑</p>
           </div>
           <div className="flex gap-3">
-            <SvgCopyButton targetId="scheme-list-section" />
+            <SvgCopyButton targetId="criteria-root" />
             <button className="flex items-center gap-2 bg-[#0084FF] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors shadow-md font-bold">
               <Plus size={18} />
               <span>新建方案</span>
@@ -260,7 +260,7 @@ export const CriteriaModule = () => {
   const totalWeight = criteria.reduce((sum, d) => sum + d.weight, 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div id="criteria-root" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 顶部操作栏 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -294,7 +294,7 @@ export const CriteriaModule = () => {
           >
             <Zap size={18} /> {isTesting ? "退出测试" : "进入测试模式"}
           </button>
-          <SvgCopyButton targetId="criteria-config-area" />
+          <SvgCopyButton targetId="criteria-root" />
         </div>
       </div>
 

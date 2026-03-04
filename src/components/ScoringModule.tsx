@@ -71,7 +71,7 @@ export const ScoringModule: React.FC = () => {
               className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", callStatus === 'unconnected' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
             >未接通</button>
           </div>
-          <SvgCopyButton targetId="scoring-diagnosis-area" />
+          <SvgCopyButton targetId="scoring-root" />
         </div>
       </header>
 

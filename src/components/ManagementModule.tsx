@@ -72,7 +72,7 @@ export const ManagementModule = () => {
   const filteredCategories = categories.filter(c => c.includes(catSearch));
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div id="management-root" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 顶部导航 */}
       <div className="flex items-center justify-between">
         <div>
@@ -80,7 +80,7 @@ export const ManagementModule = () => {
           <p className="text-slate-500 text-sm mt-1">维护全局原子维度库、官方套组及话术关联关系</p>
         </div>
         <div className="flex gap-3">
-          <SvgCopyButton targetId="management-content-area" />
+          <SvgCopyButton targetId="management-root" />
           {view === 'list' && activeTab !== 'scripts' && (
             <button 
               onClick={handleCreate}
