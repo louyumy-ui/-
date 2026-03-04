@@ -142,42 +142,27 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
     e.stopPropagation();
     const element = document.getElementById(targetId);
     if (!element) return;
-
     try {
       const rect = element.getBoundingClientRect();
       const contentSvg = domToSvg(element, rect.left, rect.top);
-      
-      const svgContent = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" xmlns="http://www.w3.org/2000/svg">
+      const svgContent = `<svg width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="white" fill-opacity="0" />
   ${contentSvg}
 </svg>`.trim();
-
-      // 【核心修复区】：强制使用 text/html 协议写入剪贴板，这是 Figma 识别图层的命门！
+      
       if (navigator.clipboard && window.ClipboardItem) {
-        const htmlBlob = new Blob([svgContent], { type: 'text/html' });
-        const textBlob = new Blob([svgContent], { type: 'text/plain' });
-        
         const item = new ClipboardItem({
-          'text/html': htmlBlob,
-          'text/plain': textBlob
+          'text/html': new Blob([svgContent], { type: 'text/html' }),
+          'text/plain': new Blob([svgContent], { type: 'text/plain' })
         });
-        
         await navigator.clipboard.write([item]);
       } else {
-        // 兼容不支持 ClipboardItem 的老浏览器
-        const textArea = document.createElement("textarea");
-        textArea.value = svgContent;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
+        await navigator.clipboard.writeText(svgContent);
       }
-
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy SVG:', err);
+    } catch (err) { 
+      console.error('Failed to copy SVG:', err); 
     }
   };
 

@@ -426,82 +426,117 @@ export const AnalysisDashboard: React.FC = () => {
           </div>
 
           {/* 底部明细数据 (子母表) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="analysis-detail-table-container">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-700">每日明细数据明细</h3>
+              <h3 className="text-sm font-bold text-slate-700">
+                {activeGroups.includes('scores') ? '质检诊断明细数据' : '每日明细数据明细'}
+              </h3>
               <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold border border-slate-200">
                 <Download size={14} /> 导出报表
               </button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[1800px]">
-                <thead>
-                  <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                    <th className="px-4 py-4 sticky left-0 bg-slate-50/50 z-20">日期</th>
-                    <th className="px-4 py-4 text-center bg-blue-50/30" colSpan={7}>呼叫结果明细</th>
-                    <th className="px-4 py-4 text-center bg-emerald-50/30" colSpan={3}>通话效率明细</th>
-                    <th className="px-4 py-4 text-center bg-rose-50/30" colSpan={4}>通话标签明细</th>
-                    <th className="px-4 py-4 text-center bg-indigo-50/30" colSpan={4}>综合质量评分</th>
-                    <th className="px-4 py-4 text-right sticky right-0 bg-slate-50/50 z-20">操作</th>
-                  </tr>
-                  <tr className="bg-slate-50/80 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                    <th className="px-4 py-3 sticky left-0 bg-slate-50/80 z-20">Date</th>
-                    {/* Results */}
-                    <th className="px-4 py-3">拨打总量</th>
-                    <th className="px-4 py-3">已接听量</th>
-                    <th className="px-4 py-3">未接通总量</th>
-                    <th className="px-4 py-3">响铃未接</th>
-                    <th className="px-4 py-3">空号</th>
-                    <th className="px-4 py-3">关机</th>
-                    <th className="px-4 py-3">停机</th>
-                    {/* Efficiency */}
-                    <th className="px-4 py-3">接通率</th>
-                    <th className="px-4 py-3">总时长(h)</th>
-                    <th className="px-4 py-3">平均时长(s)</th>
-                    {/* Tags */}
-                    <th className="px-4 py-3">标签1</th>
-                    <th className="px-4 py-3">标签2</th>
-                    <th className="px-4 py-3">标签3</th>
-                    <th className="px-4 py-3">无标签</th>
-                    {/* Scores */}
-                    <th className="px-4 py-3">总分</th>
-                    <th className="px-4 py-3">维度1</th>
-                    <th className="px-4 py-3">维度2</th>
-                    <th className="px-4 py-3">维度3</th>
-                    <th className="px-4 py-3 sticky right-0 bg-slate-50/80 z-20"></th>
-                  </tr>
+                <thead id="analysis-table-header">
+                  {activeGroups.includes('scores') ? (
+                    <tr className="bg-indigo-50/30 text-[10px] font-bold text-indigo-900 uppercase tracking-wider border-b border-indigo-100">
+                      <th className="px-4 py-4 sticky left-0 bg-indigo-50/30 z-20">日期</th>
+                      <th className="px-4 py-4">综合得分</th>
+                      <th className="px-4 py-4">开场白得分</th>
+                      <th className="px-4 py-4">语速控制得分</th>
+                      <th className="px-4 py-4">需求挖掘得分</th>
+                      <th className="px-4 py-4">异议处理得分</th>
+                      <th className="px-4 py-4">结束语得分</th>
+                      <th className="px-4 py-4">情绪价值得分</th>
+                      <th className="px-4 py-4">产品关键点得分</th>
+                      <th className="px-4 py-4">禁言规避得分</th>
+                      <th className="px-4 py-4">AI 判定结论</th>
+                      <th className="px-4 py-4 text-right sticky right-0 bg-indigo-50/30 z-20">操作</th>
+                    </tr>
+                  ) : (
+                    <>
+                      <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
+                        <th className="px-4 py-4 sticky left-0 bg-slate-50/50 z-20">日期</th>
+                        <th className="px-4 py-4 text-center bg-blue-50/30" colSpan={7}>呼叫结果明细</th>
+                        <th className="px-4 py-4 text-center bg-emerald-50/30" colSpan={3}>通话效率明细</th>
+                        <th className="px-4 py-4 text-center bg-rose-50/30" colSpan={4}>通话标签明细</th>
+                        <th className="px-4 py-4 text-center bg-indigo-50/30" colSpan={4}>综合质量评分</th>
+                        <th className="px-4 py-4 text-right sticky right-0 bg-slate-50/50 z-20">操作</th>
+                      </tr>
+                      <tr className="bg-slate-50/80 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                        <th className="px-4 py-3 sticky left-0 bg-slate-50/80 z-20">Date</th>
+                        <th className="px-4 py-3">拨打总量</th>
+                        <th className="px-4 py-3">已接听量</th>
+                        <th className="px-4 py-3">未接通总量</th>
+                        <th className="px-4 py-3">响铃未接</th>
+                        <th className="px-4 py-3">空号</th>
+                        <th className="px-4 py-3">关机</th>
+                        <th className="px-4 py-3">停机</th>
+                        <th className="px-4 py-3">接通率</th>
+                        <th className="px-4 py-3">总时长(h)</th>
+                        <th className="px-4 py-3">平均时长(s)</th>
+                        <th className="px-4 py-3">标签1</th>
+                        <th className="px-4 py-3">标签2</th>
+                        <th className="px-4 py-3">标签3</th>
+                        <th className="px-4 py-3">无标签</th>
+                        <th className="px-4 py-3">总分</th>
+                        <th className="px-4 py-3">维度1</th>
+                        <th className="px-4 py-3">维度2</th>
+                        <th className="px-4 py-3">维度3</th>
+                        <th className="px-4 py-3 sticky right-0 bg-slate-50/80 z-20"></th>
+                      </tr>
+                    </>
+                  )}
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {CHART_DATA.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors group text-[11px]">
                       <td className="px-4 py-4 font-bold text-slate-700 sticky left-0 bg-white z-10 group-hover:bg-slate-50/50">{row.date}</td>
-                      {/* Results */}
-                      <td className="px-4 py-4 font-mono text-slate-600">{row.total}</td>
-                      <td className="px-4 py-4 font-mono text-blue-600 font-bold">{row.connected}</td>
-                      <td className="px-4 py-4 font-mono text-rose-600 font-bold">{row.total - row.connected}</td>
-                      <td className="px-4 py-4 font-mono text-slate-400">{row.busy}</td>
-                      <td className="px-4 py-4 font-mono text-slate-400">{row.empty}</td>
-                      <td className="px-4 py-4 font-mono text-slate-400">{row.poweroff}</td>
-                      <td className="px-4 py-4 font-mono text-slate-400">{row.suspended}</td>
-                      {/* Efficiency */}
-                      <td className="px-4 py-4 font-mono text-emerald-600 font-bold">{row.rate}%</td>
-                      <td className="px-4 py-4 font-mono text-slate-600">{row.totalDuration}</td>
-                      <td className="px-4 py-4 font-mono text-slate-600">{row.avgDuration}</td>
-                      {/* Tags */}
-                      <td className="px-4 py-4 font-mono text-slate-600">{row.tag1}</td>
-                      <td className="px-4 py-4 font-mono text-slate-600">{row.tag2}</td>
-                      <td className="px-4 py-4 font-mono text-slate-600">{row.tag3}</td>
-                      <td className="px-4 py-4 font-mono text-slate-400">{row.total - row.tag1 - row.tag2 - row.tag3}</td>
-                      {/* Scores */}
-                      <td className="px-4 py-4 font-mono text-indigo-600 font-bold">{row.score}</td>
-                      <td className="px-4 py-4 font-mono text-slate-500">{row.s1}</td>
-                      <td className="px-4 py-4 font-mono text-slate-500">{row.s2}</td>
-                      <td className="px-4 py-4 font-mono text-slate-500">{row.s3}</td>
-                      <td className="px-4 py-4 text-right sticky right-0 bg-white z-10 group-hover:bg-slate-50/50">
-                        <button className="p-1 text-slate-400 hover:text-blue-500 transition-colors">
-                          <MoreVertical size={14} />
-                        </button>
-                      </td>
+                      {activeGroups.includes('scores') ? (
+                        <>
+                          <td className="px-4 py-4 font-mono text-indigo-600 font-bold">{row.score}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{row.s1}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{row.s2}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{row.s3}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{(Math.random() * 2 + 7).toFixed(1)}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{(Math.random() * 2 + 7).toFixed(1)}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{(Math.random() * 2 + 7).toFixed(1)}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{(Math.random() * 2 + 7).toFixed(1)}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{(Math.random() * 2 + 7).toFixed(1)}</td>
+                          <td className="px-4 py-4 text-slate-500 italic">系统判定：整体流程合规，建议加强异议处理。</td>
+                          <td className="px-4 py-4 text-right sticky right-0 bg-white z-10 group-hover:bg-slate-50/50">
+                            <button className="p-1 text-slate-400 hover:text-blue-500 transition-colors">
+                              <MoreVertical size={14} />
+                            </button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-4 font-mono text-slate-600">{row.total}</td>
+                          <td className="px-4 py-4 font-mono text-blue-600 font-bold">{row.connected}</td>
+                          <td className="px-4 py-4 font-mono text-rose-600 font-bold">{row.total - row.connected}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400">{row.busy}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400">{row.empty}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400">{row.poweroff}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400">{row.suspended}</td>
+                          <td className="px-4 py-4 font-mono text-emerald-600 font-bold">{row.rate}%</td>
+                          <td className="px-4 py-4 font-mono text-slate-600">{row.totalDuration}</td>
+                          <td className="px-4 py-4 font-mono text-slate-600">{row.avgDuration}</td>
+                          <td className="px-4 py-4 font-mono text-slate-600">{row.tag1}</td>
+                          <td className="px-4 py-4 font-mono text-slate-600">{row.tag2}</td>
+                          <td className="px-4 py-4 font-mono text-slate-600">{row.tag3}</td>
+                          <td className="px-4 py-4 font-mono text-slate-400">{row.total - row.tag1 - row.tag2 - row.tag3}</td>
+                          <td className="px-4 py-4 font-mono text-indigo-600 font-bold">{row.score}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{row.s1}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{row.s2}</td>
+                          <td className="px-4 py-4 font-mono text-slate-500">{row.s3}</td>
+                          <td className="px-4 py-4 text-right sticky right-0 bg-white z-10 group-hover:bg-slate-50/50">
+                            <button className="p-1 text-slate-400 hover:text-blue-500 transition-colors">
+                              <MoreVertical size={14} />
+                            </button>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>

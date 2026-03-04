@@ -202,7 +202,7 @@ export const ScoringModule: React.FC = () => {
             </section>
 
             {/* 维度打分 */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6 flex-1">
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 space-y-6 flex-1">
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
                   <BarChart3 size={14} className="text-amber-500" /> 维度打分
@@ -215,14 +215,14 @@ export const ScoringModule: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {callStatus === 'connected' ? SCORE_DATA.map((item, idx) => (
-                  <div key={idx} className="space-y-2">
+                  <div key={idx} className="space-y-3">
                     <div className="flex justify-between text-[11px]">
                       <span className="font-bold text-slate-700">{item.subject}</span>
                       <span className="text-slate-500 font-mono font-bold">{item.score} <span className="text-slate-300">/ {item.full}</span></span>
                     </div>
-                    <div className="h-1.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                    <div className="h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                       <div 
                         className="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(59,130,246,0.3)]" 
                         style={{ width: `${(item.score / item.full) * 100}%` }}
