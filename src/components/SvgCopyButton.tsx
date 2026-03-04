@@ -78,14 +78,18 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
     if (element instanceof HTMLElement) {
       const hasBackground = styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && styles.backgroundColor !== 'transparent';
       const hasBorder = parseFloat(styles.borderWidth) > 0;
+      const isTableElement = ['THEAD', 'TH', 'TR', 'TD', 'TABLE'].includes(element.tagName);
 
-      if (hasBackground || hasBorder) {
+      if (hasBackground || hasBorder || isTableElement) {
         const rx = parseFloat(styles.borderRadius) || 0;
         const fill = hasBackground ? styles.backgroundColor : 'none';
         const stroke = hasBorder ? styles.borderColor : 'none';
         const strokeWidth = hasBorder ? styles.borderWidth : '0';
         
-        svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
+        // 即使没有背景，对于表格单元格也画一个透明 rect 以保持结构
+        if (fill !== 'none' || stroke !== 'none' || isTableElement) {
+          svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
+        }
       }
     }
 

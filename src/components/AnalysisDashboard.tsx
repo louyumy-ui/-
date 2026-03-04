@@ -398,13 +398,25 @@ export const AnalysisDashboard: React.FC = () => {
                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">质量分历史趋势 (月/年)</h4>
                     <div className="h-[240px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={CHART_DATA}>
+                        <BarChart data={CHART_DATA}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
-                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                          <Area type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} fillOpacity={0.1} fill="#6366f1" />
-                        </AreaChart>
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                            cursor={{ fill: '#f8fafc' }}
+                          />
+                          <Bar 
+                            dataKey="score" 
+                            fill="#6366f1" 
+                            radius={[4, 4, 0, 0]} 
+                            barSize={30}
+                          >
+                            {CHART_DATA.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#6366f1' : '#818cf8'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
