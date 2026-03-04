@@ -431,9 +431,12 @@ export const AnalysisDashboard: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-700">
                 {activeGroups.includes('scores') ? '质检诊断明细数据' : '每日明细数据明细'}
               </h3>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold border border-slate-200">
-                <Download size={14} /> 导出报表
-              </button>
+              <div className="flex items-center gap-3">
+                <SvgCopyButton targetId="analysis-detail-table-container" label="复制表格 SVG" />
+                <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold border border-slate-200">
+                  <Download size={14} /> 导出报表
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[1800px]">

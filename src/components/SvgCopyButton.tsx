@@ -40,30 +40,27 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
     };
   };
 
-  const domToSvg = (element: Element, rootX: number, rootY: number): string => {
+  const domToSvg = (element: Element, offsetX = 0, offsetY = 0): string => {
     if (!(element instanceof HTMLElement || element instanceof SVGElement)) return '';
     
-    // 排除复制按钮自身，避免套娃
+    // 排除复制按钮自身
     if (element.hasAttribute('data-svg-copy-ignore')) return '';
 
     const styles = getElementStyles(element);
+    // 必须确保表头（thead）不因为默认的 visibility 判定被跳过
     if (styles.visibility === 'hidden' || styles.opacity === '0' || styles.display === 'none') return '';
 
     const rect = element.getBoundingClientRect();
-    const x = rect.left - rootX;
-    const y = rect.top - rootY;
+    // 关键：计算相对于父容器的绝对位移
+    const x = rect.left - offsetX;
+    const y = rect.top - offsetY;
 
     let svgParts: string[] = [];
 
     // 处理图标等原生 SVG
     if (element instanceof SVGElement && element.tagName.toLowerCase() === 'svg') {
       const innerContent = Array.from(element.childNodes)
-        .map(node => {
-          if (node instanceof Element) {
-            return node.outerHTML;
-          }
-          return '';
-        })
+        .map(node => node instanceof Element ? node.outerHTML : '')
         .join('');
       
       const viewBox = element.getAttribute('viewBox') || `0 0 ${styles.width} ${styles.height}`;
@@ -74,7 +71,7 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
       </g>`;
     }
 
-    // 处理背景和边框 (转换成 rect)
+    // 处理背景/边框 (确保 capture 到 thead/th 的背景色)
     if (element instanceof HTMLElement) {
       const hasBackground = styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && styles.backgroundColor !== 'transparent';
       const hasBorder = parseFloat(styles.borderWidth) > 0;
@@ -86,31 +83,29 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
         const stroke = hasBorder ? styles.borderColor : 'none';
         const strokeWidth = hasBorder ? styles.borderWidth : '0';
         
-        // 即使没有背景，对于表格单元格也画一个透明 rect 以保持结构
         if (fill !== 'none' || stroke !== 'none' || isTableElement) {
-          svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
+          svgParts.push(`<rect width="${rect.width}" height="${rect.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
         }
       }
     }
 
-    // 处理文本内容 (使用 Range API 获取精确位置)
+    // 关键优化：处理文字内容（针对表头文本对齐）
     for (const node of Array.from(element.childNodes)) {
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
         const text = node.textContent.trim();
+        const fontSize = parseFloat(styles.fontSize);
         
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        const textRect = range.getBoundingClientRect();
+        // 表格单元格（th/td）通常有内边距，需要在此校准
+        let tx = styles.paddingLeft;
+        let ty = styles.paddingTop + fontSize * 0.8; 
         
-        const tx = textRect.left - rootX;
-        const ty = textRect.top - rootY + (textRect.height * 0.8); 
-
         const textAnchor = styles.textAlign === 'center' ? 'middle' : (styles.textAlign === 'right' ? 'end' : 'start');
-        const finalX = styles.textAlign === 'center' ? tx + textRect.width / 2 : (styles.textAlign === 'right' ? tx + textRect.width : tx);
-        
+        if (textAnchor === 'middle') tx = rect.width / 2;
+        if (textAnchor === 'end') tx = rect.width - styles.paddingRight;
+
         const safeFontFamily = styles.fontFamily.includes('"') ? styles.fontFamily : `"${styles.fontFamily}"`;
         
-        svgParts.push(`<text x="${finalX}" y="${ty}" fill="${styles.color}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" text-anchor="${textAnchor}" dominant-baseline="alphabetic">${text}</text>`);
+        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" text-anchor="${textAnchor}" dominant-baseline="hanging">${text}</text>`);
       }
     }
 
@@ -119,50 +114,57 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
       const text = element.value;
       if (text) {
         const fontSize = parseFloat(styles.fontSize);
-        const tx = x + styles.paddingLeft;
-        const ty = y + styles.paddingTop + fontSize * 0.8;
+        const tx = styles.paddingLeft;
+        const ty = styles.paddingTop + fontSize * 0.8;
         const safeFontFamily = styles.fontFamily.includes('"') ? styles.fontFamily : `"${styles.fontFamily}"`;
-        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" dominant-baseline="alphabetic">${text}</text>`);
+        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" dominant-baseline="hanging">${text}</text>`);
       }
     }
 
-    // 递归子节点 (保持 rootX, rootY 不变，实现扁平化坐标系，对 Figma 更友好)
+    // 递归子节点：确保从 thead 穿透到 tr 和 th
     Array.from(element.children).forEach(child => {
-      svgParts.push(domToSvg(child, rootX, rootY));
+      svgParts.push(domToSvg(child, rect.left, rect.top));
     });
 
     const idAttr = element.id ? ` id="${element.id}"` : '';
     const classAttr = element.className && typeof element.className === 'string' ? ` class="${element.className.split(' ').slice(0, 3).join(' ')}"` : '';
 
-    // 扁平化处理：不再使用嵌套的 transform，直接在子元素中使用绝对坐标
-    return `<g${idAttr}${classAttr} data-tag="${element.tagName.toLowerCase()}">\n${svgParts.join('\n')}\n</g>`;
+    return `<g transform="translate(${x}, ${y})"${idAttr}${classAttr} data-tag="${element.tagName.toLowerCase()}">${svgParts.join('')}</g>`;
   };
 
   const copyAsSvg = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const element = document.getElementById(targetId);
     if (!element) return;
+
     try {
       const rect = element.getBoundingClientRect();
       const contentSvg = domToSvg(element, rect.left, rect.top);
-      const svgContent = `<svg width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" xmlns="http://www.w3.org/2000/svg">
+      
+      // 将 SVG 包裹在标准 XML 声明中
+      const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="white" fill-opacity="0" />
   ${contentSvg}
 </svg>`.trim();
-      
+
+      // 修复：强制使用 text/html 写入，Figma 会进行深度解析
       if (navigator.clipboard && window.ClipboardItem) {
+        const blobHtml = new Blob([svgContent], { type: 'text/html' });
+        const blobText = new Blob([svgContent], { type: 'text/plain' });
         const item = new ClipboardItem({
-          'text/html': new Blob([svgContent], { type: 'text/html' }),
-          'text/plain': new Blob([svgContent], { type: 'text/plain' })
+          'text/html': blobHtml,
+          'text/plain': blobText,
         });
         await navigator.clipboard.write([item]);
       } else {
         await navigator.clipboard.writeText(svgContent);
       }
+
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) { 
-      console.error('Failed to copy SVG:', err); 
+    } catch (err) {
+      console.error('Copy failed', err);
     }
   };
 

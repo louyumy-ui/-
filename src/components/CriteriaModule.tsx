@@ -218,7 +218,10 @@ export const CriteriaModule = () => {
           </div>
         </div>
 
-        <div id="scheme-list-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm p-8 min-h-[600px]">
+        <div id="scheme-list-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm p-8 min-h-[600px] relative">
+          <div className="absolute top-4 right-4 z-10">
+            <SvgCopyButton targetId="scheme-list-section" label="复制列表 SVG" />
+          </div>
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-200">
