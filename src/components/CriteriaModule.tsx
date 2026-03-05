@@ -72,6 +72,7 @@ export const CriteriaModule = () => {
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [criteria, setCriteria] = useState<Dimension[]>([]);
+  const [weightError, setWeightError] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [transcript, setTranscript] = useState('客服：您好，请问是王先生吗？\n客户：是的。\n客服：王先生您好，我是云蝠智能的顾问，看到您咨询过AI系统...');
   const [testScores, setTestScores] = useState<Record<string, number>>({});
@@ -100,7 +101,14 @@ export const CriteriaModule = () => {
     if (lockedTotal > totalWeight) lockedTotal = totalWeight;
 
     const remaining = totalWeight - lockedTotal;
-    
+
+    // 🌟 防呆拦截逻辑：每个未锁定的维度至少需要 1% 的空间
+    if (unlockedDimensions.length > 0 && remaining < unlockedDimensions.length * 1) {
+      setWeightError("剩余权重不足以分配给其他维度，请调低已锁定项的占比或取消部分维度。");
+      setTimeout(() => setWeightError(''), 4000); // 4秒后自动消失
+      return currentCriteria; // 终止本次修改，保持原样
+    }
+
     // Distribute remaining weight among unlocked dimensions using integers
     let distributedSum = 0;
     const newCriteria = currentCriteria.map(d => {
@@ -286,6 +294,24 @@ export const CriteriaModule = () => {
           </div>
         </div>
         <div className="flex gap-3">
+          {weightError && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
+              <div className="bg-white border-2 border-rose-500 text-rose-600 px-12 py-10 rounded-[32px] text-xl font-black shadow-2xl shadow-rose-200/50 animate-in zoom-in-95 duration-300 flex flex-col items-center gap-6 max-w-lg">
+                <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center">
+                  <AlertCircle size={48} className="text-rose-500" />
+                </div>
+                <div className="text-center leading-relaxed">
+                  {weightError}
+                </div>
+                <button 
+                  onClick={() => setWeightError('')}
+                  className="px-10 py-4 bg-rose-500 text-white rounded-2xl text-base font-bold hover:bg-rose-600 transition-all shadow-lg shadow-rose-200"
+                >
+                  确认并调整
+                </button>
+              </div>
+            </div>
+          )}
           {showSaveToast && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold animate-in fade-in slide-in-from-top-2">
               <Check size={14} /> 自定义模板已保存
@@ -457,12 +483,19 @@ export const CriteriaModule = () => {
                     <span className="text-xs font-bold text-slate-400">剩余待分配</span>
                   </div>
                 </div>
-                <button 
-                  disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
-                >
-                  <Save size={18} /> 保存并启用方案
-                </button>
+                <div className="flex gap-4">
+                  <button 
+                    className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+                  >
+                    <Save size={18} /> 保存 (存为草稿)
+                  </button>
+                  <button 
+                    disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
+                    className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
+                  >
+                    <Check size={18} /> 保存并发布
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

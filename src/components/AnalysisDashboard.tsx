@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, Legend, BarChart, Bar, ComposedChart, Cell
+  LineChart, Line, Legend, BarChart, Bar, ComposedChart, Cell,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis
 } from 'recharts';
 import { 
   TrendingUp, Users, PhoneCall, Clock, ArrowUpRight, ArrowDownRight, 
@@ -26,15 +27,31 @@ interface MetricGroup {
 }
 
 // --- Mock 数据 ---
-const CHART_DATA = [
-  { date: '02-24', total: 1200, connected: 850, rate: 70.8, tags: 450, tag1: 200, tag2: 150, tag3: 100, score: 82.5, s1: 8.5, s2: 8.0, s3: 8.2, busy: 100, empty: 80, poweroff: 100, suspended: 70, totalDuration: 10.2, avgDuration: 32 },
-  { date: '02-25', total: 1350, connected: 920, rate: 68.1, tags: 520, tag1: 250, tag2: 170, tag3: 100, score: 85.2, s1: 8.8, s2: 8.2, s3: 8.5, busy: 120, empty: 100, poweroff: 110, suspended: 100, totalDuration: 11.5, avgDuration: 34 },
-  { date: '02-26', total: 1100, connected: 780, rate: 70.9, tags: 380, tag1: 180, tag2: 120, tag3: 80, score: 79.8, s1: 8.0, s2: 7.8, s3: 8.1, busy: 80, empty: 70, poweroff: 90, suspended: 80, totalDuration: 9.8, avgDuration: 31 },
-  { date: '02-27', total: 1500, connected: 1100, rate: 73.3, tags: 680, tag1: 300, tag2: 230, tag3: 150, score: 88.5, s1: 9.0, s2: 8.7, s3: 8.8, busy: 100, empty: 100, poweroff: 120, suspended: 80, totalDuration: 13.2, avgDuration: 38 },
-  { date: '02-28', total: 1400, connected: 980, rate: 70.0, tags: 610, tag1: 280, tag2: 200, tag3: 130, score: 86.4, s1: 8.9, s2: 8.4, s3: 8.6, busy: 110, empty: 110, poweroff: 100, suspended: 100, totalDuration: 12.1, avgDuration: 36 },
-  { date: '03-01', total: 900, connected: 600, rate: 66.7, tags: 250, tag1: 120, tag2: 80, tag3: 50, score: 75.0, s1: 7.8, s2: 7.2, s3: 7.5, busy: 70, empty: 80, poweroff: 80, suspended: 70, totalDuration: 7.5, avgDuration: 28 },
-  { date: '03-02', total: 1600, connected: 1250, rate: 78.1, tags: 720, tag1: 320, tag2: 210, tag3: 190, score: 91.2, s1: 9.2, s2: 9.0, s3: 9.1, busy: 90, empty: 80, poweroff: 100, suspended: 80, totalDuration: 14.8, avgDuration: 42 },
-];
+// 🌟 新增：时间维度降采样数据模拟
+const DOWN_SAMPLED_DATA = {
+  '日': [
+    { date: '03-01', total: 420, connected: 380, busy: 20, empty: 10, poweroff: 5, suspended: 5, rate: 90.5, tags: 120, tag1: 50, tag2: 40, tag3: 30, score: 88.5, s1: 9.2, s2: 8.5, s3: 8.8, totalDuration: 12.5, avgDuration: 118 },
+    { date: '03-02', total: 380, connected: 340, busy: 25, empty: 8, poweroff: 4, suspended: 3, rate: 89.4, tags: 110, tag1: 45, tag2: 35, tag3: 30, score: 86.2, s1: 8.8, s2: 8.2, s3: 8.5, totalDuration: 11.2, avgDuration: 122 },
+    { date: '03-03', total: 450, connected: 410, busy: 15, empty: 12, poweroff: 8, suspended: 5, rate: 91.1, tags: 140, tag1: 60, tag2: 50, tag3: 30, score: 90.1, s1: 9.5, s2: 8.8, s3: 9.2, totalDuration: 14.1, avgDuration: 115 },
+    { date: '03-04', total: 410, connected: 370, busy: 22, empty: 10, poweroff: 5, suspended: 3, rate: 90.2, tags: 125, tag1: 55, tag2: 40, tag3: 30, score: 87.8, s1: 9.0, s2: 8.4, s3: 8.7, totalDuration: 12.8, avgDuration: 120 },
+    { date: '03-05', total: 390, connected: 350, busy: 20, empty: 10, poweroff: 6, suspended: 4, rate: 89.7, tags: 115, tag1: 48, tag2: 37, tag3: 30, score: 85.5, s1: 8.6, s2: 8.1, s3: 8.4, totalDuration: 11.8, avgDuration: 125 },
+    { date: '03-06', total: 440, connected: 400, busy: 18, empty: 12, poweroff: 7, suspended: 3, rate: 90.9, tags: 135, tag1: 58, tag2: 47, tag3: 30, score: 89.2, s1: 9.3, s2: 8.7, s3: 9.0, totalDuration: 13.5, avgDuration: 117 },
+    { date: '03-07', total: 405, connected: 365, busy: 20, empty: 10, poweroff: 6, suspended: 4, rate: 90.1, tags: 122, tag1: 52, tag2: 40, tag3: 30, score: 87.2, s1: 8.9, s2: 8.3, s3: 8.6, totalDuration: 12.2, avgDuration: 121 }
+  ],
+  '月': [
+    { date: '2026-03', total: 14000, connected: 12700, busy: 900, empty: 300, poweroff: 70, suspended: 30, rate: 90.7, tags: 4400, tag1: 1900, tag2: 1500, tag3: 1000, score: 90.5, s1: 9.3, s2: 8.8, s3: 9.1, totalDuration: 440, avgDuration: 118 },
+    { date: '2026-02', total: 13500, connected: 12200, busy: 880, empty: 320, poweroff: 80, suspended: 20, rate: 90.4, tags: 4200, tag1: 1800, tag2: 1400, tag3: 1000, score: 89.8, s1: 9.2, s2: 8.7, s3: 9.0, totalDuration: 425, avgDuration: 120 },
+    { date: '2026-01', total: 12900, connected: 11600, busy: 820, empty: 280, poweroff: 150, suspended: 50, rate: 89.9, tags: 3950, tag1: 1600, tag2: 1350, tag3: 1000, score: 88.7, s1: 9.0, s2: 8.5, s3: 8.8, totalDuration: 400, avgDuration: 123 },
+    { date: '2025-12', total: 13200, connected: 11900, busy: 850, empty: 300, poweroff: 100, suspended: 50, rate: 90.1, tags: 4100, tag1: 1700, tag2: 1400, tag3: 1000, score: 89.1, s1: 9.1, s2: 8.6, s3: 8.9, totalDuration: 410, avgDuration: 121 },
+    { date: '2025-11', total: 11800, connected: 10600, busy: 750, empty: 250, poweroff: 120, suspended: 80, rate: 89.8, tags: 3600, tag1: 1400, tag2: 1200, tag3: 1000, score: 88.2, s1: 9.0, s2: 8.5, s3: 8.8, totalDuration: 365, avgDuration: 124 },
+    { date: '2025-10', total: 12500, connected: 11200, busy: 800, empty: 300, poweroff: 150, suspended: 50, rate: 89.6, tags: 3800, tag1: 1500, tag2: 1300, tag3: 1000, score: 87.5, s1: 8.9, s2: 8.4, s3: 8.7, totalDuration: 380, avgDuration: 122 }
+  ],
+  '年': [
+    { date: '2026', total: 168000, connected: 152000, busy: 10500, empty: 3000, poweroff: 2000, suspended: 500, rate: 90.4, tags: 52000, tag1: 22000, tag2: 18000, tag3: 12000, score: 89.5, s1: 9.1, s2: 8.6, s3: 8.9, totalDuration: 5100, avgDuration: 121 },
+    { date: '2025', total: 155000, connected: 139000, busy: 11000, empty: 3500, poweroff: 1000, suspended: 500, rate: 89.6, tags: 48000, tag1: 20000, tag2: 16000, tag3: 12000, score: 87.1, s1: 8.8, s2: 8.3, s3: 8.6, totalDuration: 4600, avgDuration: 123 },
+    { date: '2024', total: 142000, connected: 126000, busy: 10000, empty: 4000, poweroff: 1500, suspended: 500, rate: 88.7, tags: 45000, tag1: 18000, tag2: 15000, tag3: 12000, score: 85.2, s1: 8.6, s2: 8.1, s3: 8.4, totalDuration: 4200, avgDuration: 125 }
+  ]
+};
 
 const METRIC_GROUPS: MetricGroup[] = [
   {
@@ -93,8 +110,12 @@ const METRIC_GROUPS: MetricGroup[] = [
 
 export const AnalysisDashboard: React.FC = () => {
   const [activeGroups, setActiveGroups] = useState<GroupId[]>(['results', 'scores']);
-  const [timeRange, setTimeRange] = useState('7d');
+  const [timeRange, setTimeRange] = useState<'日' | '月' | '年'>('日');
   const [compareMode, setCompareMode] = useState<'overall' | 'detailed'>('detailed');
+
+  const currentChartData = useMemo(() => {
+    return (DOWN_SAMPLED_DATA as any)[timeRange] || DOWN_SAMPLED_DATA['日'];
+  }, [timeRange]);
 
   // --- FIFO 联动逻辑 ---
   const toggleGroup = (id: GroupId) => {
@@ -253,7 +274,7 @@ export const AnalysisDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <TrendingUp size={18} className="text-blue-500" />
-                <h3 className="text-sm font-bold text-slate-700">联动式主图表 (双 Y 轴)</h3>
+                <h3 className="text-sm font-bold text-slate-700">多维分析看板</h3>
                 <div className="flex gap-2 ml-4">
                   {activeGroups.map(id => (
                     <span key={id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold border border-blue-100">
@@ -274,7 +295,7 @@ export const AnalysisDashboard: React.FC = () => {
 
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={CHART_DATA}>
+                <ComposedChart data={currentChartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} />
                   <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
@@ -284,7 +305,7 @@ export const AnalysisDashboard: React.FC = () => {
                     itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
                     labelStyle={{ fontSize: '12px', fontWeight: 'black', color: '#1e293b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}
                   />
-                  <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '11px', paddingBottom: '20px', fontWeight: 'bold' }} />
+                  <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '20px', fontWeight: 'bold' }} />
                   
                   {/* 联动渲染逻辑 */}
                   {activeGroups.includes('results') && (
@@ -294,11 +315,11 @@ export const AnalysisDashboard: React.FC = () => {
                       )}
                       {compareMode === 'detailed' && (
                         <>
-                          <Bar yAxisId="left" name="已接听" dataKey="connected" stackId="a" fill="#3b82f6" barSize={30} />
-                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#60a5fa" barSize={30} />
-                          <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#93c5fd" barSize={30} />
-                          <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#bfdbfe" barSize={30} />
-                          <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#dbeafe" radius={[4, 4, 0, 0]} barSize={30} />
+                          <Bar yAxisId="left" name="已接听" dataKey="connected" stackId="a" fill="#1e3a8a" barSize={30} />
+                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#1e40af" barSize={30} />
+                          <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#2563eb" barSize={30} />
+                          <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#3b82f6" barSize={30} />
+                          <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#60a5fa" radius={[4, 4, 0, 0]} barSize={30} />
                         </>
                       )}
                     </>
@@ -381,42 +402,37 @@ export const AnalysisDashboard: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-12 gap-8">
                   <div className="col-span-5 space-y-6">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">子维度对比</h4>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">子维度得分 (当前分/总分)</h4>
                     {['开场白合规', '语速控制', '需求挖掘', '异议处理'].map((dim, i) => (
                       <div key={dim} className="space-y-2">
                         <div className="flex justify-between text-[11px] font-bold">
                           <span className="text-slate-600">{dim}</span>
-                          <span className="text-blue-600 font-mono">{[9.2, 8.5, 7.8, 7.2][i]}</span>
+                          <span className="text-blue-600 font-mono">{[22.5, 21.2, 19.5, 18.0][i]} <span className="text-slate-300">/ 25</span></span>
                         </div>
                         <div className="h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${[92, 85, 78, 72][i]}%` }}></div>
+                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${([22.5, 21.2, 19.5, 18.0][i] / 25) * 100}%` }}></div>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="col-span-7">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">质量分历史趋势 (月/年)</h4>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">多维质检雷达图 (最新周期: {currentChartData[currentChartData.length - 1]?.date})</h4>
                     <div className="h-[240px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={CHART_DATA}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                          { subject: '开场白合规', A: 90, full: 100 },
+                          { subject: '语速控制', A: 85, full: 100 },
+                          { subject: '需求挖掘', A: 78, full: 100 },
+                          { subject: '异议处理', A: 72, full: 100 },
+                          { subject: '情绪价值', A: 88, full: 100 },
+                        ]}>
+                          <PolarGrid stroke="#e2e8f0" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} />
+                          <Radar name="得分" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.5} />
                           <Tooltip 
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            cursor={{ fill: '#f8fafc' }}
                           />
-                          <Bar 
-                            dataKey="score" 
-                            fill="#6366f1" 
-                            radius={[4, 4, 0, 0]} 
-                            barSize={30}
-                          >
-                            {CHART_DATA.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#6366f1' : '#818cf8'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
+                        </RadarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -492,7 +508,7 @@ export const AnalysisDashboard: React.FC = () => {
                   )}
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {CHART_DATA.map((row, i) => (
+                  {currentChartData.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors group text-[11px]">
                       <td className="px-4 py-4 font-bold text-slate-700 sticky left-0 bg-white z-10 group-hover:bg-slate-50/50">{row.date}</td>
                       {activeGroups.includes('scores') ? (

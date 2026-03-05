@@ -20,9 +20,9 @@ const INITIAL_ATOMIC_TAGS = [
 const CATEGORIES = ['流程', '业务', '素质', '情绪', '合规', '服务'];
 
 const SCRIPT_ASSOCIATIONS = [
-  { id: 's1', script: '金融产品电销话术 A', template: '金融电销标准套组', account: 'FIN_DEPT_01', status: 'active' },
-  { id: 's2', script: '售后回访话术 V2', template: '售后回访通用套组', account: 'SERVICE_TEAM_A', status: 'active' },
-  { id: 's3', script: '保险理赔咨询话术', template: '金融电销标准套组', account: 'INSURE_DEPT_B', status: 'active' },
+  { id: 's1', script: '金融产品电销话术 A', template: '金融电销标准套组', account: 'FIN_DEPT_01', status: 'active', createdAt: '2026-01-10 10:00:00' },
+  { id: 's2', script: '售后回访话术 V2', template: '售后回访通用套组', account: 'SERVICE_TEAM_A', status: 'active', createdAt: '2026-02-05 14:30:00' },
+  { id: 's3', script: '保险理赔咨询话术', template: '金融电销标准套组', account: 'INSURE_DEPT_B', status: 'inactive', createdAt: '2026-03-01 09:15:00' },
 ];
 
 const OFFICIAL_SETS = [
@@ -441,7 +441,9 @@ export const ManagementModule = () => {
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">评分模板</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">所关联的话术</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">所关联的账号</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">创建时间</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">状态</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -456,11 +458,35 @@ export const ManagementModule = () => {
                           <td className="px-6 py-4">
                             <span className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded">{item.account}</span>
                           </td>
+                          <td className="px-6 py-4 text-xs text-slate-500 font-mono">
+                            {item.createdAt}
+                          </td>
                           <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600">
-                              <CheckCircle2 size={12} />
-                              生效中
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                className={cn(
+                                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none",
+                                  item.status === 'active' ? "bg-blue-600" : "bg-slate-200"
+                                )}
+                              >
+                                <span className={cn(
+                                  "inline-block h-3 w-3 transform rounded-full bg-white transition-transform",
+                                  item.status === 'active' ? "translate-x-5" : "translate-x-1"
+                                )} />
+                              </button>
+                              <span className={cn(
+                                "text-[10px] font-bold",
+                                item.status === 'active' ? "text-emerald-600" : "text-slate-400"
+                              )}>
+                                {item.status === 'active' ? '启用中' : '已停用'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit3 size={16} /></button>
+                              <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></button>
+                            </div>
                           </td>
                         </tr>
                       ))}
