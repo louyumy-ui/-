@@ -105,7 +105,7 @@ export const CriteriaModule = () => {
     // 🌟 防呆拦截逻辑：每个未锁定的维度至少需要 1% 的空间
     if (unlockedDimensions.length > 0 && remaining < unlockedDimensions.length * 1) {
       setWeightError("剩余权重不足以分配给其他维度，请调低已锁定项的占比或取消部分维度。");
-      setTimeout(() => setWeightError(''), 4000); // 4秒后自动消失
+      // setTimeout(() => setWeightError(''), 4000); // 4秒后自动消失
       return currentCriteria; // 终止本次修改，保持原样
     }
 
@@ -294,24 +294,6 @@ export const CriteriaModule = () => {
           </div>
         </div>
         <div className="flex gap-3">
-          {weightError && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
-              <div className="bg-white border-2 border-rose-500 text-rose-600 px-12 py-10 rounded-[32px] text-xl font-black shadow-2xl shadow-rose-200/50 animate-in zoom-in-95 duration-300 flex flex-col items-center gap-6 max-w-lg">
-                <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center">
-                  <AlertCircle size={48} className="text-rose-500" />
-                </div>
-                <div className="text-center leading-relaxed">
-                  {weightError}
-                </div>
-                <button 
-                  onClick={() => setWeightError('')}
-                  className="px-10 py-4 bg-rose-500 text-white rounded-2xl text-base font-bold hover:bg-rose-600 transition-all shadow-lg shadow-rose-200"
-                >
-                  确认并调整
-                </button>
-              </div>
-            </div>
-          )}
           {showSaveToast && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold animate-in fade-in slide-in-from-top-2">
               <Check size={14} /> 自定义模板已保存
@@ -327,7 +309,15 @@ export const CriteriaModule = () => {
         </div>
       </div>
 
-      <div id="criteria-config-area" className="grid grid-cols-12 gap-6 min-h-[800px]">
+      <div id="criteria-config-area" className="grid grid-cols-12 gap-6 min-h-[800px] relative">
+        {/* 🌟 核心修改：把错误弹窗直接放在被截取的区域内部 🌟 */}
+        {weightError && (
+          <div className="absolute top-4 right-4 z-[99] flex items-center gap-2 px-4 py-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold shadow-lg shadow-rose-100">
+            <AlertCircle size={16} /> 
+            {weightError}
+            <button onClick={() => setWeightError('')} className="ml-2 hover:text-rose-800">✕</button>
+          </div>
+        )}
         {/* 左侧：原子维度库 / 模板列表 */}
         <div className="col-span-3 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm overflow-y-auto max-h-[800px]">
           {editMode === 'custom' ? (

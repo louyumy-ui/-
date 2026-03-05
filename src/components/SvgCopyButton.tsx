@@ -32,11 +32,6 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
       opacity: style.opacity,
       display: style.display,
       visibility: style.visibility,
-      paddingTop: parseFloat(style.paddingTop) || 0,
-      paddingLeft: parseFloat(style.paddingLeft) || 0,
-      paddingRight: parseFloat(style.paddingRight) || 0,
-      paddingBottom: parseFloat(style.paddingBottom) || 0,
-      textAlign: style.textAlign,
     };
   };
 
@@ -52,20 +47,29 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
 
     let svgParts: string[] = [];
 
-    // 1. 处理图标等原生 SVG
+    // 🌟 修复 1：完美处理 SVG 图标（防止黑块，保留 viewBox）
     if (element instanceof SVGElement && element.tagName.toLowerCase() === 'svg') {
-      const innerContent = Array.from(element.childNodes)
-        .map(node => node instanceof Element ? node.outerHTML : '').join('');
+      // 深度克隆节点，防止修改原网页
+      const clone = element.cloneNode(true) as SVGElement;
       
-      // 🌟 核心修正：从 <svg> 元素复制关键样式属性到 <g>，防止黑块 🌟
-      const stroke = styles.stroke !== 'none' ? ` stroke="${styles.stroke}"` : '';
-      const fill = styles.fill !== 'none' ? ` fill="${styles.fill}"` : '';
-      const strokeWidth = styles.strokeWidth !== '0px' ? ` stroke-width="${styles.strokeWidth}"` : '';
+      // 强制将父级的真实颜色赋给图标的 stroke/fill，Figma 才能识别
+      const actualColor = styles.color || '#000000';
+      const currentStroke = clone.getAttribute('stroke');
+      const currentFill = clone.getAttribute('fill');
       
-      return `<g transform="translate(${x}, ${y})" data-figma-type="icon"${stroke}${fill}${strokeWidth}>${innerContent}</g>`;
+      if (!currentStroke || currentStroke === 'currentColor') clone.setAttribute('stroke', actualColor);
+      if (currentFill === 'currentColor') clone.setAttribute('fill', actualColor);
+      
+      // 清除 class，防止 Figma 混淆
+      clone.removeAttribute('class');
+      clone.setAttribute('width', rect.width.toString());
+      clone.setAttribute('height', rect.height.toString());
+
+      // 嵌套 <svg> 在 Figma 中是完美支持的，能保留原图标的 viewBox 比例
+      return `<g transform="translate(${x}, ${y})" data-figma-type="icon">${clone.outerHTML}</g>`;
     }
 
-    // 2. 处理背景和边框 (捕获 HTMLElement 样式)
+    // 处理背景和边框 (背景矩形必须在最底层)
     if (element instanceof HTMLElement) {
       const hasBackground = styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && styles.backgroundColor !== 'transparent';
       const hasBorder = parseFloat(styles.borderWidth) > 0;
@@ -75,57 +79,67 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
         const fill = hasBackground ? styles.backgroundColor : 'none';
         const stroke = hasBorder ? styles.borderColor : 'none';
         const strokeWidth = hasBorder ? styles.borderWidth : '0';
-        // 🌟 核心修正：背景矩形必须是该组的第一个元素，确保在底层 🌟
-        svgParts.unshift(`<rect width="${styles.width}" height="${styles.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
+        svgParts.push(`<rect width="${styles.width}" height="${styles.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" rx="${rx}" fill-opacity="${styles.opacity}" stroke-opacity="${styles.opacity}" />`);
       }
     }
 
-    // 🌟 3. 新增：专门处理表单元素 (Input / Checkbox) 🌟
+    // 专门处理表单元素 (Input / Checkbox)
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-      // 3.1 处理 Checkbox / Radio
       if (element.type === 'checkbox' || element.type === 'radio') {
         const isChecked = (element as HTMLInputElement).checked;
         const boxSize = Math.min(rect.width, rect.height) || 16;
-        // 画复选框的底色
         svgParts.push(`<rect x="0" y="${(rect.height - boxSize)/2}" width="${boxSize}" height="${boxSize}" fill="${isChecked ? '#2563eb' : '#ffffff'}" stroke="#cbd5e1" stroke-width="1.5" rx="${element.type === 'radio' ? '50%' : '4'}" />`);
-        // 画打勾符号
         if (isChecked && element.type === 'checkbox') {
           svgParts.push(`<path d="M4 8l2.5 2.5 5.5-5.5" transform="translate(0, ${(rect.height - boxSize)/2})" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />`);
         }
-      } 
-      // 3.2 处理文本输入框
-      else {
+      } else {
         const text = element.value || element.placeholder;
         if (text) {
           const fontSize = parseFloat(styles.fontSize);
-          const tx = styles.paddingLeft || 12;
-          const ty = (styles.paddingTop || 8) + fontSize * 0.85; 
+          const tx = 12; // 默认左侧内边距
+          const ty = (rect.height / 2) + (fontSize * 0.35); // 绝对垂直居中算法
           const safeFontFamily = styles.fontFamily.includes('"') ? styles.fontFamily : `"${styles.fontFamily}"`;
-          // 输入框里的文字颜色，如果是 placeholder 往往较浅
           const textColor = element.value ? styles.color : '#94a3b8';
-          svgParts.push(`<text x="${tx}" y="${ty}" fill="${textColor}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" dominant-baseline="alphabetic">${text}</text>`);
+          
+          // 处理 HTML 特殊字符
+          const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          svgParts.push(`<text x="${tx}" y="${ty}" fill="${textColor}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" text-anchor="start">${safeText}</text>`);
         }
       }
     }
 
-    // 4. 处理普通文本内容
+    // 🌟 修复 2：使用 Range API 获取文字的绝对物理坐标（无视 Flexbox/Grid 干扰）
     for (const node of Array.from(element.childNodes)) {
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
-        const text = node.textContent.trim();
+        const text = node.textContent.trim().replace(/\s+/g, ' '); // 将多个空格合并
+        if (!text) continue;
+
+        // 转义特殊字符，防止破坏 SVG 结构
+        const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const fontSize = parseFloat(styles.fontSize);
-        let tx = styles.paddingLeft;
-        let ty = styles.paddingTop + fontSize * 0.85; 
         
-        if (styles.textAlign === 'center') tx = styles.width / 2;
-        else if (styles.textAlign === 'right') tx = styles.width - styles.paddingRight;
-        const textAnchor = styles.textAlign === 'center' ? 'middle' : (styles.textAlign === 'right' ? 'end' : 'start');
+        // 【核心魔法】通过创建选取范围，获取文字节点的真实尺寸和位置
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const textRect = range.getBoundingClientRect();
+
+        let tx = 0;
+        let ty = 0;
+
+        if (textRect.width > 0) {
+          // 直接计算文字相对于当前元素的绝对偏移
+          tx = textRect.left - rect.left;
+          ty = textRect.top - rect.top + fontSize * 0.8; // 0.8 是通用字体的基线修正值
+        }
+
         const safeFontFamily = styles.fontFamily.includes('"') ? styles.fontFamily : `"${styles.fontFamily}"`;
         
-        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" text-anchor="${textAnchor}" dominant-baseline="alphabetic">${text}</text>`);
+        // 既然我们获取了真实的左边缘位置，text-anchor 必须为 start，完美还原所有居中/右对齐
+        svgParts.push(`<text x="${tx}" y="${ty}" fill="${styles.color}" font-family='${safeFontFamily}' font-size="${styles.fontSize}" font-weight="${styles.fontWeight}" text-anchor="start">${safeText}</text>`);
       }
     }
 
-    // 5. 递归子节点
+    // 递归子节点
     Array.from(element.children).forEach(child => {
       svgParts.push(domToSvg(child, rect.left, rect.top));
     });
@@ -145,14 +159,12 @@ export const SvgCopyButton: React.FC<SvgCopyButtonProps> = ({ targetId, classNam
       const rect = element.getBoundingClientRect();
       const contentSvg = domToSvg(element, rect.left, rect.top);
       
-      // 将 SVG 包裹在标准 XML 声明中
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="white" fill-opacity="0" />
   ${contentSvg}
 </svg>`.trim();
 
-      // 修复：强制使用 text/html 写入，Figma 会进行深度解析
       if (navigator.clipboard && window.ClipboardItem) {
         const blobHtml = new Blob([svgContent], { type: 'text/html' });
         const blobText = new Blob([svgContent], { type: 'text/plain' });
