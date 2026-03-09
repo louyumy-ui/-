@@ -4,7 +4,7 @@ import {
   MoreHorizontal, ArrowLeft, MessageSquare, PhoneCall, TrendingUp, 
   Settings, Bell, Cloud, ChevronLeft, User, Calendar, Play, 
   Download, Star, BarChart3, Zap, Users, PieChart, Check, Copy,
-  Lock, Unlock, ShieldCheck, LayoutGrid, Library, Save, AlertCircle
+  ShieldCheck, LayoutGrid, Library, Save, AlertCircle
 } from 'lucide-react';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
@@ -74,7 +74,7 @@ export const CriteriaModule = () => {
   const [criteria, setCriteria] = useState<Dimension[]>([]);
   const [weightError, setWeightError] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [transcript, setTranscript] = useState('AI：您好，请问是王先生吗？\n客户：是的。\nAI：王先生您好，我是云蝠智能的顾问，看到您咨询过AI系统...');
+  const [transcript, setTranscript] = useState('');
   const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [showSaveToast, setShowSaveToast] = useState(false);
 
@@ -83,7 +83,7 @@ export const CriteriaModule = () => {
   const [robotQuality, setRobotQuality] = useState('standard'); // standard, high, pro
   const [scriptContent, setScriptContent] = useState('');
 
-  // --- 权重自动平分逻辑 ---
+  // --- 分值自动平分逻辑 ---
   const rebalanceWeights = (currentCriteria: Dimension[], changedId?: string, newWeight?: number) => {
     if (currentCriteria.length === 0) return [];
     
@@ -296,8 +296,18 @@ export const CriteriaModule = () => {
             <ChevronLeft size={20} /> 返回列表
           </button>
           <div className="flex gap-3">
-            <button className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">存为草稿</button>
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700">保存并发布</button>
+            <div className="group relative">
+              <button className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">存为草稿</button>
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                仅与当前话术绑定
+              </div>
+            </div>
+            <div className="group relative">
+              <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700">保存并发布</button>
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                同步至通用模板库，支持一键复用
+              </div>
+            </div>
           </div>
         </div>
 
@@ -326,9 +336,9 @@ export const CriteriaModule = () => {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { id: 'standard', name: '标准音质', desc: '适用于常规通知类场景，响应极快', icon: Zap },
-                  { id: 'high', name: '高清自然', desc: '深度神经网络合成，语调自然亲切', icon: Star },
-                  { id: 'pro', name: '专业仿真', desc: '真人录音+AI拼接，几乎无法分辨', icon: ShieldCheck },
+                  { id: 'standard', name: '基础质检(适合通用)', desc: '覆盖核心合规点，响应极快', icon: Zap },
+                  { id: 'high', name: '严格质检(适合高要求)', desc: '深度语义分析，语调自然亲切', icon: Star },
+                  { id: 'pro', name: '自定义(专业人员)', desc: '支持复杂逻辑，几乎无法分辨', icon: ShieldCheck },
                 ].map(item => (
                   <button
                     key={item.id}
@@ -402,7 +412,7 @@ export const CriteriaModule = () => {
         <div className="flex gap-3">
           {showSaveToast && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold animate-in fade-in slide-in-from-top-2">
-              <Check size={14} /> 自定义模板已保存
+              <Check size={14} /> 自定义模板已保存 (仅与当前话术绑定)
             </div>
           )}
           <button 
@@ -489,7 +499,7 @@ export const CriteriaModule = () => {
           )}
         </div>
 
-        {/* 右侧：权重策略引擎 / 测试环境 */}
+        {/* 右侧：分值策略引擎 / 测试环境 */}
         <div className="col-span-9 space-y-6">
           {!isTesting ? (
             <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm h-full flex flex-col">
@@ -554,7 +564,6 @@ export const CriteriaModule = () => {
                               item.locked ? "bg-blue-600 text-white shadow-lg" : "bg-white border border-slate-200 text-slate-400 hover:text-blue-500"
                             )}
                           >
-                            {item.locked ? <Lock size={12} /> : <Unlock size={12} />}
                             <span>{item.locked ? "已锁定" : "锁定"}</span>
                           </button>
                           {editMode === 'custom' && (
@@ -576,7 +585,7 @@ export const CriteriaModule = () => {
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-xs font-bold text-slate-500">权重分布</span>
+                    <span className="text-xs font-bold text-slate-500">分值分布</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-slate-200 rounded-full"></div>
@@ -584,17 +593,27 @@ export const CriteriaModule = () => {
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <button 
-                    className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
-                  >
-                    <Save size={18} /> 存为草稿
-                  </button>
-                  <button 
-                    disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
-                    className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
-                  >
-                    <Check size={18} /> 保存并发布
-                  </button>
+                  <div className="group relative">
+                    <button 
+                      className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+                    >
+                      <Save size={18} /> 存为草稿
+                    </button>
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                      仅与当前话术绑定
+                    </div>
+                  </div>
+                  <div className="group relative">
+                    <button 
+                      disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
+                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
+                    >
+                      <Check size={18} /> 保存并发布
+                    </button>
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                      同步至通用模板库，支持一键复用
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -611,7 +630,7 @@ export const CriteriaModule = () => {
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
                     className="w-full h-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 font-mono resize-none"
-                    placeholder="示例输入：&#10;AI：您好，我是XX公司的客服，请问有什么可以帮您？&#10;客户：我想咨询一下产品价格。&#10;AI：好的，我们的产品目前有..."
+                    placeholder={"请输入对话内容...\n例如：\nAI：您好，请问是王先生吗？\n客户：是的。"}
                   />
                   <button 
                     onClick={handleCopyFullText}
