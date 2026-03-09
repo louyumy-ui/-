@@ -78,6 +78,12 @@ export const CriteriaModule = () => {
   const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [showSaveToast, setShowSaveToast] = useState(false);
 
+  const SAMPLE_TRANSCRIPT = `AI：您好！我是云蝠智能的数字员工姣姣，请问是王先生吗？
+客户：是的，哪位？
+AI：王先生您好，看到您近期在我们官网咨询过AI外呼系统，想跟您简单沟通下您的业务需求。
+客户：哦，那个啊，我现在在开会，你晚点再打吧。
+AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案例发到您手机上，祝您工作顺利！`;
+
   // 话术创建相关状态
   const [scriptName, setScriptName] = useState('');
   const [robotQuality, setRobotQuality] = useState('standard'); // standard, high, pro
@@ -331,23 +337,28 @@ export const CriteriaModule = () => {
 
             <div className="space-y-4">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                * 机器人通话质量
+                * 机器人质检等级
                 <Info size={14} className="text-slate-300" />
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { id: 'standard', name: '基础质检(适合通用)', desc: '覆盖核心合规点，响应极快', icon: Zap },
-                  { id: 'high', name: '严格质检(适合高要求)', desc: '深度语义分析，语调自然亲切', icon: Star },
-                  { id: 'pro', name: '自定义(专业人员)', desc: '支持复杂逻辑，几乎无法分辨', icon: ShieldCheck },
+                  { id: 'standard', name: '基础质检', desc: '覆盖核心合规点，响应极快', icon: Zap },
+                  { id: 'high', name: '严格质检', desc: '深度语义分析，语调自然亲切', icon: Star },
+                  { id: 'pro', name: '自定义配置', desc: '支持复杂逻辑，几乎无法分辨', icon: ShieldCheck },
                 ].map(item => (
                   <button
                     key={item.id}
                     onClick={() => setRobotQuality(item.id)}
                     className={cn(
-                      "p-4 rounded-2xl border-2 text-left transition-all group",
+                      "p-4 rounded-2xl border-2 text-left transition-all group relative overflow-hidden",
                       robotQuality === item.id ? "border-blue-600 bg-blue-50/50" : "border-slate-100 bg-white hover:border-slate-200"
                     )}
                   >
+                    {robotQuality === item.id && (
+                      <div className="absolute top-0 right-0 bg-blue-600 text-white p-1 rounded-bl-xl">
+                        <Check size={12} />
+                      </div>
+                    )}
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-all",
                       robotQuality === item.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
@@ -599,8 +610,9 @@ export const CriteriaModule = () => {
                     >
                       <Save size={18} /> 存为草稿
                     </button>
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 shadow-xl">
                       仅与当前话术绑定
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                     </div>
                   </div>
                   <div className="group relative">
@@ -610,8 +622,9 @@ export const CriteriaModule = () => {
                     >
                       <Check size={18} /> 保存并发布
                     </button>
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                      同步至通用模板库，支持一键复用
+                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                      发布至个人通用模板库，支持跨话术调用
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                     </div>
                   </div>
                 </div>
@@ -623,14 +636,19 @@ export const CriteriaModule = () => {
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><MessageSquare size={18} className="text-blue-500" /> 通话文本模拟</h3>
-                  <button className="text-[10px] font-bold text-blue-600 hover:underline">加载示例</button>
+                  <button 
+                    onClick={() => setTranscript(SAMPLE_TRANSCRIPT)}
+                    className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    <Zap size={12} /> 填入参考样例
+                  </button>
                 </div>
                 <div className="flex-1 relative">
                   <textarea 
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
                     className="w-full h-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 font-mono resize-none"
-                    placeholder={"请输入对话内容...\n例如：\nAI：您好，请问是王先生吗？\n客户：是的。"}
+                    placeholder={"请在此输入对话，格式需区分角色，如：\nAI：您好，请问是王先生吗？\n客户：是的。\nAI：王先生您好，我是云蝠智能的顾问..."}
                   />
                   <button 
                     onClick={handleCopyFullText}
