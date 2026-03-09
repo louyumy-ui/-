@@ -7,7 +7,7 @@ import {
 import { 
   TrendingUp, Users, PhoneCall, Clock, ArrowUpRight, ArrowDownRight, 
   Download, Calendar, Filter, RotateCcw, ChevronDown, MessageSquare,
-  Activity, Tag, ShieldCheck, BarChart3, PieChart, LayoutDashboard, Info,
+  Activity, Tag, ShieldCheck, BarChart3, PieChart, LayoutDashboard, LayoutGrid, Info,
   ChevronRight, ListFilter, Search, MoreVertical, FileText, CheckCircle2
 } from 'lucide-react';
 import { SvgCopyButton } from './SvgCopyButton';
@@ -21,7 +21,7 @@ interface MetricGroup {
   title: string;
   mainLabel: string;
   mainValue: string;
-  subMetrics: { label: string; value: string; detail?: string[] }[];
+  subMetrics: { label: string; value: string; detail?: string[]; isSms?: boolean }[];
   color: string;
   icon: React.ReactNode;
 }
@@ -56,19 +56,20 @@ const DOWN_SAMPLED_DATA = {
 const METRIC_GROUPS: MetricGroup[] = [
   {
     id: 'results',
-    title: '呼叫结果明细',
+    title: '通话结果分布',
     mainLabel: '拨打总量',
     mainValue: '1,600',
     color: 'blue',
     icon: <PhoneCall size={20} />,
     subMetrics: [
       { label: '已接听量', value: '1,250' },
-      { label: '未接通总量', value: '350', detail: ['响铃未接: 120', '空号: 80', '关机: 100', '停机: 50'] }
+      { label: '未接通总量', value: '350', detail: ['响铃未接: 120', '空号: 80', '关机: 100', '停机: 50'] },
+      { label: '短信发送 (总/成功)', value: '850 / 820', isSms: true }
     ]
   },
   {
     id: 'efficiency',
-    title: '通话效率明细',
+    title: '通话时长分布',
     mainLabel: '接通率',
     mainValue: '78.1%',
     color: 'emerald',
@@ -109,25 +110,57 @@ const METRIC_GROUPS: MetricGroup[] = [
 ];
 
 export const AnalysisDashboard: React.FC = () => {
-  const [activeGroups, setActiveGroups] = useState<GroupId[]>(['results', 'scores']);
+  const [activeGroups, setActiveGroups] = useState<GroupId[]>(['results']);
   const [timeRange, setTimeRange] = useState<'日' | '月' | '年'>('日');
   const [compareMode, setCompareMode] = useState<'overall' | 'detailed'>('detailed');
+  const [layoutMode, setLayoutMode] = useState<'single' | 'multi'>('multi');
+  const [cardScale, setCardScale] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const itemsPerPage = 10;
 
   const currentChartData = useMemo(() => {
     return (DOWN_SAMPLED_DATA as any)[timeRange] || DOWN_SAMPLED_DATA['日'];
   }, [timeRange]);
 
-  // --- FIFO 联动逻辑 ---
+  const handleSort = (key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'desc' };
+    });
+  };
+
+  const sortedData = useMemo(() => {
+    const data = [...currentChartData];
+    if (!sortConfig) return data;
+    const { key, direction } = sortConfig;
+    return data.sort((a, b) => {
+      const valA = (a as any)[key];
+      const valB = (b as any)[key];
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [currentChartData, sortConfig]);
+
+  const paginatedData = useMemo(() => {
+    return sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [sortedData, currentPage]);
+
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
+  // --- 多选联动逻辑 ---
   const toggleGroup = (id: GroupId) => {
     setActiveGroups(prev => {
       if (prev.includes(id)) {
+        if (prev.length === 1) return prev; // 至少保留一个
         return prev.filter(g => g !== id);
       }
-      const next = [...prev, id];
-      if (next.length > 2) {
-        return next.slice(1); // 移除最早选中的 (FIFO)
-      }
-      return next;
+      if (prev.length >= 4) return prev; // 最多4个
+      return [...prev, id];
     });
   };
 
@@ -145,6 +178,33 @@ export const AnalysisDashboard: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100">
+            <button 
+              onClick={() => setLayoutMode('single')}
+              className={cn("p-1.5 rounded-lg transition-all", layoutMode === 'single' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400")}
+              title="单卡片模式"
+            >
+              <LayoutDashboard size={16} />
+            </button>
+            <button 
+              onClick={() => setLayoutMode('multi')}
+              className={cn("p-1.5 rounded-lg transition-all", layoutMode === 'multi' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400")}
+              title="多卡片平铺"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+            <span className="text-[10px] font-bold text-slate-400">缩放</span>
+            <input 
+              type="range" min="0.8" max="1.2" step="0.1" 
+              value={cardScale} 
+              onChange={(e) => setCardScale(parseFloat(e.target.value))}
+              className="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+            />
+          </div>
+
           <div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100">
             <span className={cn("text-[10px] font-bold transition-colors", compareMode === 'overall' ? "text-blue-600" : "text-slate-400")}>总体数据</span>
             <button 
@@ -174,101 +234,117 @@ export const AnalysisDashboard: React.FC = () => {
 
       <main className="flex-1 overflow-y-auto p-8 space-y-8" id="analysis-content-area">
         <div className="w-[1440px] mx-auto space-y-8">
-          {/* 2x2 核心指标矩阵 */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* 左侧：客观结果组 */}
-            <div className="grid grid-cols-2 gap-4">
-              {METRIC_GROUPS.slice(0, 2).map((group) => {
-                const isActive = activeGroups.includes(group.id);
-                return (
-                  <div 
-                    key={group.id}
-                    onClick={() => toggleGroup(group.id)}
-                    className={cn(
-                      "p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 group relative overflow-hidden",
-                      isActive ? "border-blue-500 bg-white shadow-xl shadow-blue-100 -translate-y-1" : "border-white bg-white shadow-sm hover:border-slate-200"
-                    )}
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-50 text-slate-400")}>
-                        {group.icon}
-                      </div>
-                      {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
+          {/* 核心指标矩阵 */}
+          <div 
+            className={cn(
+              "grid gap-6 transition-all duration-500",
+              layoutMode === 'multi' ? "grid-cols-4" : "grid-cols-1"
+            )}
+            style={{ transform: `scale(${cardScale})`, transformOrigin: 'top center' }}
+          >
+            {METRIC_GROUPS.map((group) => {
+              const isActive = activeGroups.includes(group.id);
+              return (
+                <div 
+                  key={group.id}
+                  onClick={() => toggleGroup(group.id)}
+                  className={cn(
+                    "p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 group relative overflow-hidden",
+                    isActive ? "border-blue-500 bg-white shadow-xl shadow-blue-100 -translate-y-1" : "border-white bg-white shadow-sm hover:border-slate-200"
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-50 text-slate-400")}>
+                      {group.icon}
                     </div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{group.title}</h4>
-                    <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-2xl font-black text-slate-800 font-mono">{group.mainValue}</span>
-                      <span className="text-[10px] text-slate-400 font-bold">{group.mainLabel}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {group.subMetrics.map((sm, i) => (
-                        <div key={i} className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-slate-500">{sm.label}</span>
-                            <span className="text-[10px] font-bold text-slate-700">{sm.value}</span>
-                          </div>
-                          {sm.detail && compareMode === 'detailed' && (
-                            <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
-                              {sm.detail.map((d, j) => (
-                                <span key={j} className="text-[9px] text-slate-400">{d}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
                   </div>
-                );
-              })}
-            </div>
-
-            {/* 右侧：质量评估组 */}
-            <div className="grid grid-cols-2 gap-4">
-              {METRIC_GROUPS.slice(2, 4).map((group) => {
-                const isActive = activeGroups.includes(group.id);
-                return (
-                  <div 
-                    key={group.id}
-                    onClick={() => toggleGroup(group.id)}
-                    className={cn(
-                      "p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 group relative overflow-hidden",
-                      isActive ? "border-blue-500 bg-white shadow-xl shadow-blue-100 -translate-y-1" : "border-white bg-white shadow-sm hover:border-slate-200"
-                    )}
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className={cn("p-2.5 rounded-xl", isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-50 text-slate-400")}>
-                        {group.icon}
-                      </div>
-                      {isActive && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>}
-                    </div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{group.title}</h4>
-                    <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-2xl font-black text-slate-800 font-mono">{group.mainValue}</span>
-                      <span className="text-[10px] text-slate-400 font-bold">{group.mainLabel}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {group.subMetrics.map((sm, i) => (
-                        <div key={i} className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-slate-500">{sm.label}</span>
-                            <span className="text-[10px] font-bold text-slate-700">{sm.value}</span>
-                          </div>
-                          {sm.detail && compareMode === 'detailed' && (
-                            <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
-                              {sm.detail.map((d, j) => (
-                                <span key={j} className="text-[9px] text-slate-400">{d}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{group.title}</h4>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-2xl font-black text-slate-800 font-mono">{group.mainValue}</span>
+                    <span className="text-[10px] text-slate-400 font-bold">{group.mainLabel}</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="space-y-2">
+                    {group.subMetrics.map((sm, i) => (
+                      <div key={i} className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-slate-500">{sm.label}</span>
+                          <span className={cn("text-[10px] font-bold", (sm as any).isSms ? "text-blue-600" : "text-slate-700")}>{sm.value}</span>
+                        </div>
+                        {sm.detail && compareMode === 'detailed' && (
+                          <div className="grid grid-cols-2 gap-1 pl-2 border-l border-slate-100">
+                            {sm.detail.map((d, j) => (
+                              <span key={j} className="text-[9px] text-slate-400">{d}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
+          {/* 可视化趋势区 - 独立展示 */}
+          <div className={cn(
+            "grid gap-6",
+            activeGroups.length > 1 ? "grid-cols-2" : "grid-cols-1"
+          )}>
+            {activeGroups.map(groupId => {
+              const group = METRIC_GROUPS.find(g => g.id === groupId);
+              if (!group) return null;
+              return (
+                <div key={groupId} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("p-2 rounded-lg text-white", 
+                        groupId === 'results' ? "bg-blue-500" : 
+                        groupId === 'efficiency' ? "bg-emerald-500" : 
+                        groupId === 'tags' ? "bg-rose-500" : "bg-indigo-500"
+                      )}>
+                        {group.icon}
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-700">{group.title}趋势分析</h3>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div> 核心指标
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={currentChartData}>
+                        <defs>
+                          <linearGradient id={`color-${groupId}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={groupId === 'results' ? "#3b82f6" : groupId === 'efficiency' ? "#10b981" : groupId === 'tags' ? "#f43f5e" : "#6366f1"} stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor={groupId === 'results' ? "#3b82f6" : groupId === 'efficiency' ? "#10b981" : groupId === 'tags' ? "#f43f5e" : "#6366f1"} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                          itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey={groupId === 'results' ? 'total' : groupId === 'efficiency' ? 'rate' : groupId === 'tags' ? 'tags' : 'score'} 
+                          stroke={groupId === 'results' ? "#3b82f6" : groupId === 'efficiency' ? "#10b981" : groupId === 'tags' ? "#f43f5e" : "#6366f1"} 
+                          fillOpacity={1} 
+                          fill={`url(#color-${groupId})`} 
+                          strokeWidth={3}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           {/* 可视化趋势区 */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="flex items-center justify-between mb-8">
@@ -316,7 +392,7 @@ export const AnalysisDashboard: React.FC = () => {
                       {compareMode === 'detailed' && (
                         <>
                           <Bar yAxisId="left" name="已接听" dataKey="connected" stackId="a" fill="#1e3a8a" barSize={30} />
-                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#1e40af" barSize={30} />
+                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#1d4ed8" barSize={30} />
                           <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#2563eb" barSize={30} />
                           <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#3b82f6" barSize={30} />
                           <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#60a5fa" radius={[4, 4, 0, 0]} barSize={30} />
@@ -377,8 +453,33 @@ export const AnalysisDashboard: React.FC = () => {
                     <Tag size={18} className="text-purple-500" />
                     <h3 className="text-sm font-bold text-slate-700">工单业务视图</h3>
                   </div>
+                  <div className="flex gap-2">
+                    <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-bold border border-purple-100">热点标签 TOP 10</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-6">
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { label: '高意向', count: 320, color: 'bg-blue-500' },
+                    { label: '官网咨询', count: 210, color: 'bg-emerald-500' },
+                    { label: '售后诉求', count: 150, color: 'bg-amber-500' },
+                    { label: '价格敏感', count: 120, color: 'bg-rose-500' },
+                    { label: '竞品对比', count: 95, color: 'bg-indigo-500' },
+                    { label: '功能咨询', count: 88, color: 'bg-cyan-500' },
+                    { label: '投诉建议', count: 45, color: 'bg-slate-500' },
+                    { label: '无标签', count: 40, color: 'bg-slate-300' },
+                  ].map((tag, i) => (
+                    <div 
+                      key={tag.label} 
+                      className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-md transition-all cursor-default group"
+                    >
+                      <div className={cn("w-2 h-2 rounded-full", tag.color)}></div>
+                      <span className="text-xs font-bold text-slate-700">{tag.label}</span>
+                      <span className="text-[10px] font-black text-slate-400 font-mono group-hover:text-blue-600 transition-colors">{tag.count}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="mt-8 grid grid-cols-4 gap-6">
                   {['高意向', '官网咨询', '售后诉求', '无标签'].map((label, i) => (
                     <div key={label} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                       <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</div>
@@ -401,37 +502,41 @@ export const AnalysisDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-8">
-                  <div className="col-span-5 space-y-6">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">子维度得分 (当前分/总分)</h4>
-                    {['开场白合规', '语速控制', '需求挖掘', '异议处理'].map((dim, i) => (
-                      <div key={dim} className="space-y-2">
-                        <div className="flex justify-between text-[11px] font-bold">
-                          <span className="text-slate-600">{dim}</span>
-                          <span className="text-blue-600 font-mono">{[22.5, 21.2, 19.5, 18.0][i]} <span className="text-slate-300">/ 25</span></span>
+                  <div className="col-span-12 lg:col-span-7 grid grid-cols-2 gap-4">
+                    {['开场白合规', '语速控制', '需求挖掘', '异议处理', '情绪价值'].map((dim, i) => (
+                      <div key={dim} className={cn(
+                        "p-5 rounded-2xl border transition-all hover:shadow-md",
+                        i === 0 ? "col-span-2 bg-blue-50 border-blue-100" : "bg-white border-slate-100"
+                      )}>
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-xs font-bold text-slate-600">{dim}</span>
+                          <span className="text-sm font-black text-blue-600 font-mono">
+                            {[18.5, 17.2, 16.5, 15.0, 18.0][i]} <span className="text-[10px] text-slate-300">/ 20</span>
+                          </span>
                         </div>
-                        <div className="h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${([22.5, 21.2, 19.5, 18.0][i] / 25) * 100}%` }}></div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className={cn("h-full rounded-full transition-all duration-1000", i === 0 ? "bg-blue-600" : "bg-amber-400")} 
+                            style={{ width: `${([18.5, 17.2, 16.5, 15.0, 18.0][i] / 20) * 100}%` }}
+                          ></div>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="col-span-7">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">多维质检雷达图 (最新周期: {currentChartData[currentChartData.length - 1]?.date})</h4>
-                    <div className="h-[240px] w-full">
+                  <div className="col-span-12 lg:col-span-5 bg-slate-50/50 rounded-3xl border border-slate-100 p-6 flex flex-col items-center justify-center min-h-[300px]">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">全维度诊断雷达图</h4>
+                    <div className="w-full h-full min-h-[240px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                          { subject: '开场白合规', A: 90, full: 100 },
-                          { subject: '语速控制', A: 85, full: 100 },
-                          { subject: '需求挖掘', A: 78, full: 100 },
-                          { subject: '异议处理', A: 72, full: 100 },
-                          { subject: '情绪价值', A: 88, full: 100 },
+                          { subject: '开场白', A: 92, fullMark: 100 },
+                          { subject: '语速', A: 86, fullMark: 100 },
+                          { subject: '需求', A: 82, fullMark: 100 },
+                          { subject: '异议', A: 75, fullMark: 100 },
+                          { subject: '情绪', A: 90, fullMark: 100 },
                         ]}>
                           <PolarGrid stroke="#e2e8f0" />
-                          <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} />
-                          <Radar name="得分" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.5} />
-                          <Tooltip 
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                          />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
+                          <Radar name="诊断得分" dataKey="A" stroke="#0084FF" fill="#0084FF" fillOpacity={0.15} />
                         </RadarChart>
                       </ResponsiveContainer>
                     </div>
@@ -459,8 +564,8 @@ export const AnalysisDashboard: React.FC = () => {
                 <thead id="analysis-table-header">
                   {activeGroups.includes('scores') ? (
                     <tr className="bg-indigo-50/30 text-[10px] font-bold text-indigo-900 uppercase tracking-wider border-b border-indigo-100">
-                      <th className="px-4 py-4 sticky left-0 bg-indigo-50/30 z-20">日期</th>
-                      <th className="px-4 py-4">综合得分</th>
+                      <th onClick={() => handleSort('date')} className="px-4 py-4 sticky left-0 bg-indigo-50/30 z-20 cursor-pointer hover:bg-indigo-100">日期 {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                      <th onClick={() => handleSort('score')} className="px-4 py-4 cursor-pointer hover:bg-indigo-100">综合得分 {sortConfig?.key === 'score' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                       <th className="px-4 py-4">开场白得分</th>
                       <th className="px-4 py-4">语速控制得分</th>
                       <th className="px-4 py-4">需求挖掘得分</th>
@@ -476,16 +581,16 @@ export const AnalysisDashboard: React.FC = () => {
                     <>
                       <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                         <th className="px-4 py-4 sticky left-0 bg-slate-50/50 z-20">日期</th>
-                        <th className="px-4 py-4 text-center bg-blue-50/30" colSpan={7}>呼叫结果明细</th>
-                        <th className="px-4 py-4 text-center bg-emerald-50/30" colSpan={3}>通话效率明细</th>
+                        <th className="px-4 py-4 text-center bg-blue-50/30" colSpan={7}>通话结果分布</th>
+                        <th className="px-4 py-4 text-center bg-emerald-50/30" colSpan={3}>通话时长分布</th>
                         <th className="px-4 py-4 text-center bg-rose-50/30" colSpan={4}>通话标签明细</th>
                         <th className="px-4 py-4 text-center bg-indigo-50/30" colSpan={4}>综合质量评分</th>
                         <th className="px-4 py-4 text-right sticky right-0 bg-slate-50/50 z-20">操作</th>
                       </tr>
                       <tr className="bg-slate-50/80 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                        <th className="px-4 py-3 sticky left-0 bg-slate-50/80 z-20">Date</th>
-                        <th className="px-4 py-3">拨打总量</th>
-                        <th className="px-4 py-3">已接听量</th>
+                        <th onClick={() => handleSort('date')} className="px-4 py-3 sticky left-0 bg-slate-50/80 z-20 cursor-pointer hover:bg-slate-100">Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                        <th onClick={() => handleSort('total')} className="px-4 py-3 cursor-pointer hover:bg-slate-100">拨打总量 {sortConfig?.key === 'total' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                        <th onClick={() => handleSort('connected')} className="px-4 py-3 cursor-pointer hover:bg-slate-100">已接听量 {sortConfig?.key === 'connected' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                         <th className="px-4 py-3">未接通总量</th>
                         <th className="px-4 py-3">响铃未接</th>
                         <th className="px-4 py-3">空号</th>
@@ -508,7 +613,7 @@ export const AnalysisDashboard: React.FC = () => {
                   )}
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {currentChartData.map((row, i) => (
+                  {paginatedData.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors group text-[11px]">
                       <td className="px-4 py-4 font-bold text-slate-700 sticky left-0 bg-white z-10 group-hover:bg-slate-50/50">{row.date}</td>
                       {activeGroups.includes('scores') ? (
@@ -560,6 +665,41 @@ export const AnalysisDashboard: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* 分页器 */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
+              <div className="text-[10px] font-bold text-slate-400">
+                显示 {(currentPage - 1) * itemsPerPage + 1} 到 {Math.min(currentPage * itemsPerPage, sortedData.length)} 条，共 {sortedData.length} 条
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 disabled:opacity-50 hover:text-blue-600 transition-all"
+                >
+                  <ChevronRight className="rotate-180" size={14} />
+                </button>
+                {[...Array(totalPages)].map((_, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-[10px] font-bold transition-all",
+                      currentPage === i + 1 ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white text-slate-400 border border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 disabled:opacity-50 hover:text-blue-600 transition-all"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

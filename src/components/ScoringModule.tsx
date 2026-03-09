@@ -21,10 +21,11 @@ interface ScoreDetail {
 
 // --- Mock 数据 ---
 const SCORE_DATA: ScoreDetail[] = [
-  { subject: '开场白合规', score: 10, full: 10, weight: 25 },
-  { subject: '语速控制', score: 8.5, full: 10, weight: 25 },
-  { subject: '需求挖掘', score: 7.2, full: 10, weight: 25 },
-  { subject: '异议处理', score: 6.8, full: 10, weight: 25 },
+  { subject: '开场白合规', score: 18, full: 20, weight: 20 },
+  { subject: '语速控制', score: 16.5, full: 20, weight: 20 },
+  { subject: '需求挖掘', score: 14.2, full: 20, weight: 20 },
+  { subject: '异议处理', score: 13.8, full: 20, weight: 20 },
+  { subject: '情绪价值', score: 17.5, full: 20, weight: 20 },
 ];
 
 const CHAT_MESSAGES = [
@@ -201,47 +202,77 @@ export const ScoringModule: React.FC = () => {
               </div>
             </section>
 
-            {/* 维度打分 */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 space-y-6 flex-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <BarChart3 size={14} className="text-amber-500" /> 维度打分
-                </h3>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-blue-600 font-mono">
-                    {totalScore !== null ? totalScore.toFixed(1) : '--'}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400">/ 100</span>
-                </div>
-              </div>
-              
-              <div className="space-y-6">
-                {callStatus === 'connected' ? SCORE_DATA.map((item, idx) => (
-                  <div key={idx} className="space-y-3">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="font-bold text-slate-700">{item.subject}</span>
-                      <span className="text-slate-500 font-mono font-bold">{item.score} <span className="text-slate-300">/ {item.full}</span></span>
-                    </div>
-                    <div className="h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                      <div 
-                        className="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(59,130,246,0.3)]" 
-                        style={{ width: `${(item.score / item.full) * 100}%` }}
-                      ></div>
-                    </div>
+            {/* 维度打分 - Bento 风格 */}
+            <section className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <BarChart3 size={14} className="text-amber-500" /> 综合诊断得分
+                  </h3>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-blue-600 font-mono">
+                      {totalScore !== null ? totalScore.toFixed(1) : '--'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">/ 100</span>
                   </div>
-                )) : (
-                  <div className="flex flex-col items-center justify-center py-10 text-slate-300 space-y-2">
-                    <Activity size={24} />
-                    <p className="text-[10px] font-bold">无评分数据</p>
+                </div>
+
+                {/* 雷达图集成 */}
+                {callStatus === 'connected' && (
+                  <div className="h-48 mb-6 bg-slate-50/50 rounded-2xl border border-slate-100 p-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="60%" data={SCORE_DATA.map(d => ({ subject: d.subject, A: (d.score / d.full) * 100 }))}>
+                        <PolarGrid stroke="#e2e8f0" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 8, fontWeight: 'bold' }} />
+                        <Radar name="Score" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} />
+                      </RadarChart>
+                    </ResponsiveContainer>
                   </div>
                 )}
+
+                <div className="grid grid-cols-1 gap-3">
+                  {callStatus === 'connected' ? SCORE_DATA.map((item, idx) => (
+                    <div key={idx} className="p-4 bg-slate-50/30 border border-slate-100 rounded-xl group hover:bg-white hover:shadow-md transition-all relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/10 group-hover:bg-blue-500 transition-colors"></div>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-700">{item.subject}</span>
+                          <span className="text-[8px] text-slate-400 uppercase tracking-tighter font-mono">Dimension ID: {idx + 1}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-blue-600 font-mono">{item.score}</span>
+                          <span className="text-[9px] text-slate-300">/ {item.full}</span>
+                        </div>
+                      </div>
+                      <div className="h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                        <div 
+                          className="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(59,130,246,0.2)]" 
+                          style={{ width: `${(item.score / item.full) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-slate-300 space-y-2">
+                      <Activity size={24} />
+                      <p className="text-[10px] font-bold">无评分数据</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {callStatus === 'connected' && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 relative">
-                    <div className="absolute -top-3 left-4 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded shadow-sm">AI 诊断结论</div>
-                    <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
+                <div className="bg-[#0084FF] rounded-2xl p-6 text-white shadow-lg shadow-blue-200 relative overflow-hidden group shrink-0">
+                  <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <ShieldCheck size={120} />
+                  </div>
+                  <div className="relative z-10 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-md">
+                        <CheckCircle2 size={16} />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">AI 诊断结论</span>
+                    </div>
+                    <p className="text-xs font-medium leading-relaxed opacity-90">
                       该通话整体表现良好，开场白标准，但在需求挖掘环节略显生硬，建议加强同理心表达。
                     </p>
                   </div>

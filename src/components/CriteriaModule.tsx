@@ -67,16 +67,21 @@ interface Dimension {
 }
 
 export const CriteriaModule = () => {
-  const [view, setView] = useState<'list' | 'edit'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'script-creation'>('list');
   const [editMode, setEditMode] = useState<'template' | 'custom'>('custom');
   const [selectedScheme, setSelectedScheme] = useState<any>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [criteria, setCriteria] = useState<Dimension[]>([]);
   const [weightError, setWeightError] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [transcript, setTranscript] = useState('客服：您好，请问是王先生吗？\n客户：是的。\n客服：王先生您好，我是云蝠智能的顾问，看到您咨询过AI系统...');
+  const [transcript, setTranscript] = useState('AI：您好，请问是王先生吗？\n客户：是的。\nAI：王先生您好，我是云蝠智能的顾问，看到您咨询过AI系统...');
   const [testScores, setTestScores] = useState<Record<string, number>>({});
   const [showSaveToast, setShowSaveToast] = useState(false);
+
+  // 话术创建相关状态
+  const [scriptName, setScriptName] = useState('');
+  const [robotQuality, setRobotQuality] = useState('standard'); // standard, high, pro
+  const [scriptContent, setScriptContent] = useState('');
 
   // --- 权重自动平分逻辑 ---
   const rebalanceWeights = (currentCriteria: Dimension[], changedId?: string, newWeight?: number) => {
@@ -104,7 +109,7 @@ export const CriteriaModule = () => {
 
     // 🌟 防呆拦截逻辑：每个未锁定的维度至少需要 1% 的空间
     if (unlockedDimensions.length > 0 && remaining < unlockedDimensions.length * 1) {
-      setWeightError("剩余权重不足以分配给其他维度，请调低已锁定项的占比或取消部分维度。");
+      setWeightError("剩余分值不足以分配给其他维度，请调低已锁定项的占比或取消部分维度。");
       // setTimeout(() => setWeightError(''), 4000); // 4秒后自动消失
       return currentCriteria; // 终止本次修改，保持原样
     }
@@ -209,19 +214,34 @@ export const CriteriaModule = () => {
     }, 1500);
   };
 
+  const handleCopyFullText = () => {
+    navigator.clipboard.writeText(transcript);
+  };
+
   if (view === 'list') {
     return (
       <div id="criteria-root" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">评分标准制定</h2>
-            <p className="text-slate-500 text-sm mt-1">配置质检维度、权重及自动化评分逻辑</p>
+            <p className="text-slate-500 text-sm mt-1">配置质检维度、分值及自动化评分逻辑</p>
           </div>
           <div className="flex gap-3">
-            <SvgCopyButton targetId="criteria-root" />
-            <button className="flex items-center gap-2 bg-[#0084FF] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors shadow-md font-bold">
-              <Plus size={18} />
-              <span>新建方案</span>
+            <button 
+              onClick={() => setView('script-creation')}
+              className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+            >
+              <Plus size={18} /> 创建话术
+            </button>
+            <button 
+              onClick={() => {
+                setEditMode('custom');
+                setCriteria([]);
+                setView('edit');
+              }}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all flex items-center gap-2"
+            >
+              <Plus size={18} /> 新增方案
             </button>
           </div>
         </div>
@@ -268,31 +288,117 @@ export const CriteriaModule = () => {
     );
   }
 
-  const totalWeight = criteria.reduce((sum, d) => sum + d.weight, 0);
+  if (view === 'script-creation') {
+    return (
+      <div className="p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setView('list')} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-bold transition-all">
+            <ChevronLeft size={20} /> 返回列表
+          </button>
+          <div className="flex gap-3">
+            <button className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">存为草稿</button>
+            <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700">保存并发布</button>
+          </div>
+        </div>
 
-  return (
-    <div id="criteria-root" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* 顶部操作栏 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setView('list')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><ArrowLeft size={20} /></button>
+        <div className="bg-white border border-slate-200 rounded-3xl p-10 shadow-sm space-y-8">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{selectedScheme?.name}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-slate-400">当前模式:</span>
-              <div className="flex bg-slate-100 p-0.5 rounded-lg">
-                <button 
-                  onClick={() => setEditMode('custom')}
-                  className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'custom' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
-                >自定义配置</button>
-                <button 
-                  onClick={() => setEditMode('template')}
-                  className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'template' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
-                >模板中心</button>
+            <h2 className="text-2xl font-bold text-slate-900">创建新话术</h2>
+            <p className="text-slate-500 text-sm mt-1">配置机器人通话逻辑与交互话术内容</p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">话术名称</label>
+              <input 
+                type="text" 
+                value={scriptName}
+                onChange={(e) => setScriptName(e.target.value)}
+                placeholder="请输入话术名称，如：金融产品首访话术"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                * 机器人通话质量
+                <Info size={14} className="text-slate-300" />
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { id: 'standard', name: '标准音质', desc: '适用于常规通知类场景，响应极快', icon: Zap },
+                  { id: 'high', name: '高清自然', desc: '深度神经网络合成，语调自然亲切', icon: Star },
+                  { id: 'pro', name: '专业仿真', desc: '真人录音+AI拼接，几乎无法分辨', icon: ShieldCheck },
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setRobotQuality(item.id)}
+                    className={cn(
+                      "p-4 rounded-2xl border-2 text-left transition-all group",
+                      robotQuality === item.id ? "border-blue-600 bg-blue-50/50" : "border-slate-100 bg-white hover:border-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-all",
+                      robotQuality === item.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                    )}>
+                      <item.icon size={20} />
+                    </div>
+                    <div className="text-sm font-bold text-slate-800 mb-1">{item.name}</div>
+                    <div className="text-[10px] text-slate-400 leading-relaxed">{item.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">话术内容配置</label>
+              <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex gap-2">
+                  <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded transition-all"><Plus size={16} /></button>
+                  <div className="w-px h-4 bg-slate-200 my-auto mx-1"></div>
+                  <button className="px-3 py-1 text-[10px] font-bold text-slate-500 hover:bg-white rounded transition-all">插入变量</button>
+                  <button className="px-3 py-1 text-[10px] font-bold text-slate-500 hover:bg-white rounded transition-all">逻辑跳转</button>
+                </div>
+                <textarea 
+                  value={scriptContent}
+                  onChange={(e) => setScriptContent(e.target.value)}
+                  placeholder="请输入话术流程内容...&#10;例如：&#10;[开场白] 您好，我是XX公司的AI助手...&#10;[分支1] 如果客户回答“不需要”，则跳转到..."
+                  className="w-full h-64 p-4 text-sm text-slate-600 outline-none font-mono resize-none"
+                />
               </div>
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (view === 'edit') {
+    const totalWeight = criteria.reduce((sum, d) => sum + d.weight, 0);
+    return (
+      <div id="criteria-root" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* 顶部操作栏 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setView('list')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><ArrowLeft size={20} /></button>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">{selectedScheme?.name}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-slate-400">当前模式:</span>
+                <div className="flex bg-slate-100 p-0.5 rounded-lg">
+                  <button 
+                    onClick={() => setEditMode('custom')}
+                    className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'custom' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+                  >自定义配置</button>
+                  <button 
+                    onClick={() => setEditMode('template')}
+                    className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'template' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+                  >模板中心</button>
+                </div>
+              </div>
+            </div>
+          </div>
         <div className="flex gap-3">
           {showSaveToast && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold animate-in fade-in slide-in-from-top-2">
@@ -387,24 +493,24 @@ export const CriteriaModule = () => {
         <div className="col-span-9 space-y-6">
           {!isTesting ? (
             <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm h-full flex flex-col">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <Settings2 size={20} className="text-blue-500" />
-                  <h3 className="text-lg font-bold text-slate-800">权重策略引擎</h3>
-                  {editMode === 'template' && (
-                    <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-bold border border-amber-100 flex items-center gap-1">
-                      <AlertCircle size={10} /> 模板模式：维度不可增删
-                    </span>
-                  )}
-                </div>
-                <div className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-black font-mono flex items-center gap-3",
-                  Math.abs(totalWeight - 100) < 0.01 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                )}>
-                  <span>总权重: {Math.round(totalWeight)}%</span>
-                  {Math.abs(totalWeight - 100) < 0.01 ? <ShieldCheck size={18} /> : <AlertCircle size={18} />}
-                </div>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <Settings2 size={20} className="text-blue-500" />
+                <h3 className="text-lg font-bold text-slate-800">分值策略引擎</h3>
+                {editMode === 'template' && (
+                  <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-bold border border-amber-100 flex items-center gap-1">
+                    <AlertCircle size={10} /> 模板模式：维度不可增删
+                  </span>
+                )}
               </div>
+              <div className={cn(
+                "px-4 py-2 rounded-xl text-sm font-black font-mono flex items-center gap-3",
+                Math.abs(totalWeight - 100) < 0.01 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+              )}>
+                <span>总分: {Math.round(totalWeight)}分</span>
+                {Math.abs(totalWeight - 100) < 0.01 ? <ShieldCheck size={18} /> : <AlertCircle size={18} />}
+              </div>
+            </div>
 
               {criteria.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4">
@@ -443,9 +549,13 @@ export const CriteriaModule = () => {
                         <div className="col-span-3 flex justify-end items-center gap-3">
                           <button 
                             onClick={() => toggleLock(item.id)}
-                            className={cn("p-2 rounded-lg transition-all", item.locked ? "bg-blue-600 text-white shadow-lg" : "bg-white border border-slate-200 text-slate-400 hover:text-blue-500")}
+                            className={cn(
+                              "px-3 py-1.5 rounded-lg transition-all text-[10px] font-bold flex items-center gap-1.5", 
+                              item.locked ? "bg-blue-600 text-white shadow-lg" : "bg-white border border-slate-200 text-slate-400 hover:text-blue-500"
+                            )}
                           >
-                            {item.locked ? <Lock size={16} /> : <Unlock size={16} />}
+                            {item.locked ? <Lock size={12} /> : <Unlock size={12} />}
+                            <span>{item.locked ? "已锁定" : "锁定"}</span>
                           </button>
                           {editMode === 'custom' && (
                             <button 
@@ -477,7 +587,7 @@ export const CriteriaModule = () => {
                   <button 
                     className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
                   >
-                    <Save size={18} /> 保存 (存为草稿)
+                    <Save size={18} /> 存为草稿
                   </button>
                   <button 
                     disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
@@ -501,8 +611,14 @@ export const CriteriaModule = () => {
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
                     className="w-full h-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 font-mono resize-none"
-                    placeholder="请输入通话转写文本..."
+                    placeholder="示例输入：&#10;AI：您好，我是XX公司的客服，请问有什么可以帮您？&#10;客户：我想咨询一下产品价格。&#10;AI：好的，我们的产品目前有..."
                   />
+                  <button 
+                    onClick={handleCopyFullText}
+                    className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur shadow-sm border border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 transition-all flex items-center gap-2 text-[10px] font-bold"
+                  >
+                    <Copy size={12} /> 一键复制全文
+                  </button>
                   {isAnalyzing && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center animate-in fade-in">
                       <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -564,4 +680,7 @@ export const CriteriaModule = () => {
       </div>
     </div>
   );
+}
+
+return null;
 };
