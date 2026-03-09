@@ -301,18 +301,14 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
           <button onClick={() => setView('list')} className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-bold transition-all">
             <ChevronLeft size={20} /> 返回列表
           </button>
-          <div className="flex gap-3">
-            <div className="group relative">
+          <div className="flex gap-6">
+            <div className="flex flex-col items-center gap-1">
               <button className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">存为草稿</button>
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                仅与当前话术绑定
-              </div>
+              <span className="text-[10px] text-slate-400 font-medium">仅与当前话术绑定</span>
             </div>
-            <div className="group relative">
+            <div className="flex flex-col items-center gap-1">
               <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700">保存并发布</button>
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                同步至通用模板库，支持一键复用
-              </div>
+              <span className="text-[10px] text-slate-400 font-medium">同步至通用模板库，支持一键复用</span>
             </div>
           </div>
         </div>
@@ -342,13 +338,23 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
               </label>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { id: 'standard', name: '基础质检', desc: '覆盖核心合规点，响应极快', icon: Zap },
-                  { id: 'high', name: '严格质检', desc: '深度语义分析，语调自然亲切', icon: Star },
-                  { id: 'pro', name: '自定义配置', desc: '支持复杂逻辑，几乎无法分辨', icon: ShieldCheck },
+                  { id: 'standard', name: '基础质检', desc: '覆盖核心合规点，响应极快', icon: Zap, templateId: 't1' },
+                  { id: 'high', name: '严格质检', desc: '深度语义分析，语调自然亲切', icon: Star, templateId: 't2' },
+                  { id: 'pro', name: '自定义配置', desc: '支持复杂逻辑，几乎无法分辨', icon: ShieldCheck, templateId: null },
                 ].map(item => (
                   <button
                     key={item.id}
-                    onClick={() => setRobotQuality(item.id)}
+                    onClick={() => {
+                      setRobotQuality(item.id);
+                      setView('edit');
+                      if (item.templateId) {
+                        const template = OFFICIAL_TEMPLATES.find(t => t.id === item.templateId);
+                        if (template) selectTemplate(template);
+                      } else {
+                        setEditMode('custom');
+                        setCriteria([]);
+                      }
+                    }}
                     className={cn(
                       "p-4 rounded-2xl border-2 text-left transition-all group relative overflow-hidden",
                       robotQuality === item.id ? "border-blue-600 bg-blue-50/50" : "border-slate-100 bg-white hover:border-slate-200"
@@ -603,29 +609,23 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
                     <span className="text-xs font-bold text-slate-400">剩余待分配</span>
                   </div>
                 </div>
-                <div className="flex gap-4">
-                  <div className="group relative">
+                <div className="flex gap-6">
+                  <div className="flex flex-col items-center gap-1">
                     <button 
                       className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
                     >
                       <Save size={18} /> 存为草稿
                     </button>
-                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 shadow-xl">
-                      仅与当前话术绑定
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">仅与当前话术绑定</span>
                   </div>
-                  <div className="group relative">
+                  <div className="flex flex-col items-center gap-1">
                     <button 
                       disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
                       className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
                     >
                       <Check size={18} /> 保存并发布
                     </button>
-                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 shadow-xl">
-                      发布至个人通用模板库，支持跨话术调用
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">同步至通用模板库，支持一键复用</span>
                   </div>
                 </div>
               </div>

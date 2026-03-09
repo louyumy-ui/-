@@ -330,14 +330,46 @@ export const AnalysisDashboard: React.FC = () => {
                           contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                           itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
                         />
-                        <Area 
-                          type="monotone" 
-                          dataKey={groupId === 'results' ? 'total' : groupId === 'efficiency' ? 'rate' : groupId === 'tags' ? 'tags' : 'score'} 
-                          stroke={groupId === 'results' ? "#3b82f6" : groupId === 'efficiency' ? "#10b981" : groupId === 'tags' ? "#f43f5e" : "#6366f1"} 
-                          fillOpacity={1} 
-                          fill={`url(#color-${groupId})`} 
-                          strokeWidth={3}
-                        />
+                        {compareMode === 'detailed' && <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />}
+                        {compareMode === 'overall' ? (
+                          <Area 
+                            type="monotone" 
+                            dataKey={groupId === 'results' ? 'total' : groupId === 'efficiency' ? 'rate' : groupId === 'tags' ? 'tags' : 'score'} 
+                            stroke={groupId === 'results' ? "#3b82f6" : groupId === 'efficiency' ? "#10b981" : groupId === 'tags' ? "#f43f5e" : "#6366f1"} 
+                            fillOpacity={1} 
+                            fill={`url(#color-${groupId})`} 
+                            strokeWidth={3}
+                          />
+                        ) : (
+                          <>
+                            {groupId === 'results' && (
+                              <>
+                                <Area name="已接听" type="monotone" dataKey="connected" stackId="1" stroke="#1e3a8a" fill="#1e3a8a" fillOpacity={0.6} />
+                                <Area name="响铃未接" type="monotone" dataKey="busy" stackId="1" stroke="#1d4ed8" fill="#1d4ed8" fillOpacity={0.6} />
+                                <Area name="空号" type="monotone" dataKey="empty" stackId="1" stroke="#2563eb" fill="#2563eb" fillOpacity={0.6} />
+                                <Area name="关机" type="monotone" dataKey="poweroff" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                                <Area name="停机" type="monotone" dataKey="suspended" stackId="1" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.6} />
+                              </>
+                            )}
+                            {groupId === 'tags' && (
+                              <>
+                                <Area name="标签 1" type="monotone" dataKey="tag1" stackId="1" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.6} />
+                                <Area name="标签 2" type="monotone" dataKey="tag2" stackId="1" stroke="#fb7185" fill="#fb7185" fillOpacity={0.6} />
+                                <Area name="标签 3" type="monotone" dataKey="tag3" stackId="1" stroke="#fda4af" fill="#fda4af" fillOpacity={0.6} />
+                              </>
+                            )}
+                            {groupId === 'scores' && (
+                              <>
+                                <Area name="维度 1" type="monotone" dataKey="s1" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} strokeWidth={2} />
+                                <Area name="维度 2" type="monotone" dataKey="s2" stroke="#818cf8" fill="#818cf8" fillOpacity={0.2} strokeWidth={2} />
+                                <Area name="维度 3" type="monotone" dataKey="s3" stroke="#a5b4fc" fill="#a5b4fc" fillOpacity={0.2} strokeWidth={2} />
+                              </>
+                            )}
+                            {groupId === 'efficiency' && (
+                              <Area name="接通率" type="monotone" dataKey="rate" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={3} />
+                            )}
+                          </>
+                        )}
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
