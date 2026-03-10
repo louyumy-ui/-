@@ -28,7 +28,7 @@ export default function App() {
 
   const navItems = [
     { id: 'management', label: '管理端控制台', icon: Settings, desc: '原子库与官方套组维护' },
-    { id: 'criteria', label: '打分标准制定', icon: ClipboardList, desc: '配置质检维度与权重' },
+    { id: 'criteria', label: '打分标准制定', icon: ClipboardList, desc: '配置质检维度与分值' },
     { id: 'scoring', label: '打分效果呈现', icon: FileText, desc: '查看单通通话诊断详情' },
     { id: 'analysis', label: '数据分析看板', icon: BarChart3, desc: '全量通话质量趋势分析' },
   ];

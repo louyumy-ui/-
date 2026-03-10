@@ -303,11 +303,11 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
           </button>
           <div className="flex gap-6">
             <div className="flex flex-col items-center gap-1">
-              <button className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">存为草稿</button>
+              <button className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">保存</button>
               <span className="text-[10px] text-slate-400 font-medium">仅与当前话术绑定</span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700">保存并发布</button>
+              <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700">发布</button>
               <span className="text-[10px] text-slate-400 font-medium">同步至通用模板库，支持一键复用</span>
             </div>
           </div>
@@ -415,13 +415,13 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
                 <span className="text-xs text-slate-400">当前模式:</span>
                 <div className="flex bg-slate-100 p-0.5 rounded-lg">
                   <button 
-                    onClick={() => setEditMode('custom')}
-                    className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'custom' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
-                  >自定义配置</button>
-                  <button 
                     onClick={() => setEditMode('template')}
                     className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'template' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
                   >模板中心</button>
+                  <button 
+                    onClick={() => setEditMode('custom')}
+                    className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", editMode === 'custom' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500")}
+                  >自定义配置</button>
                 </div>
               </div>
             </div>
@@ -490,27 +490,44 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
             </div>
           ) : (
             <div className="space-y-6">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><LayoutGrid size={18} className="text-blue-500" /> 行业标准套组</h3>
-              <div className="space-y-4">
-                {OFFICIAL_TEMPLATES.map(tmpl => (
-                  <div 
-                    key={tmpl.id}
-                    onClick={() => selectTemplate(tmpl)}
-                    className="p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 cursor-pointer transition-all group"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-slate-700">{tmpl.name}</span>
-                      <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500" />
+              <div className="space-y-6">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><LayoutGrid size={18} className="text-blue-500" /> 行业标准套组</h3>
+                <div className="space-y-4">
+                  {OFFICIAL_TEMPLATES.map(tmpl => (
+                    <div 
+                      key={tmpl.id}
+                      onClick={() => selectTemplate(tmpl)}
+                      className="p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 cursor-pointer transition-all group"
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-slate-700">{tmpl.name}</span>
+                        <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500" />
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {tmpl.dimensions.map(d => (
+                          <span key={d.id} className="px-1.5 py-0.5 bg-slate-100 rounded text-[8px] text-slate-500 font-medium">
+                            {ATOMIC_LIBRARY.find(a => a.id === d.id)?.name}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {tmpl.dimensions.map(d => (
-                        <span key={d.id} className="px-1.5 py-0.5 bg-slate-100 rounded text-[8px] text-slate-500 font-medium">
-                          {ATOMIC_LIBRARY.find(a => a.id === d.id)?.name}
-                        </span>
-                      ))}
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4"><User size={18} className="text-indigo-500" /> 我的模板</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'm1', name: '个人常用催收模板', count: 5 },
+                    { id: 'm2', name: '高意向客户筛选模板', count: 4 },
+                  ].map(m => (
+                    <div key={m.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/30 cursor-pointer transition-all">
+                      <div className="text-xs font-bold text-slate-700 mb-1">{m.name}</div>
+                      <div className="text-[10px] text-slate-400">{m.count} 个评分维度</div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -614,7 +631,7 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
                     <button 
                       className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
                     >
-                      <Save size={18} /> 存为草稿
+                      <Save size={18} /> 保存
                     </button>
                     <span className="text-[10px] text-slate-400 font-medium">仅与当前话术绑定</span>
                   </div>
@@ -623,7 +640,7 @@ AI：好的王先生，那不打扰您开会了。我稍后把相关的行业案
                       disabled={Math.abs(totalWeight - 100) > 0.01 || criteria.length === 0}
                       className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
                     >
-                      <Check size={18} /> 保存并发布
+                      <Check size={18} /> 发布
                     </button>
                     <span className="text-[10px] text-slate-400 font-medium">同步至通用模板库，支持一键复用</span>
                   </div>

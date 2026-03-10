@@ -8,7 +8,7 @@ import {
   TrendingUp, Users, PhoneCall, Clock, ArrowUpRight, ArrowDownRight, 
   Download, Calendar, Filter, RotateCcw, ChevronDown, MessageSquare,
   Activity, Tag, ShieldCheck, BarChart3, PieChart, LayoutDashboard, LayoutGrid, Info,
-  ChevronRight, ListFilter, Search, MoreVertical, FileText, CheckCircle2
+  ChevronRight, ListFilter, Search, MoreVertical, FileText, CheckCircle2, Maximize2, X
 } from 'lucide-react';
 import { SvgCopyButton } from './SvgCopyButton';
 import { cn } from '../lib/utils';
@@ -114,7 +114,7 @@ export const AnalysisDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'日' | '月' | '年'>('日');
   const [compareMode, setCompareMode] = useState<'overall' | 'detailed'>('detailed');
   const [layoutMode, setLayoutMode] = useState<'single' | 'multi'>('multi');
-  const [cardScale, setCardScale] = useState(1);
+  const [expandedChart, setExpandedChart] = useState<GroupId | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -195,16 +195,6 @@ export const AnalysisDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-            <span className="text-[10px] font-bold text-slate-400">缩放</span>
-            <input 
-              type="range" min="0.8" max="1.2" step="0.1" 
-              value={cardScale} 
-              onChange={(e) => setCardScale(parseFloat(e.target.value))}
-              className="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-            />
-          </div>
-
           <div className="flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100">
             <span className={cn("text-[10px] font-bold transition-colors", compareMode === 'overall' ? "text-blue-600" : "text-slate-400")}>总体数据</span>
             <button 
@@ -240,7 +230,6 @@ export const AnalysisDashboard: React.FC = () => {
               "grid gap-6 transition-all duration-500",
               layoutMode === 'multi' ? "grid-cols-4" : "grid-cols-1"
             )}
-            style={{ transform: `scale(${cardScale})`, transformOrigin: 'top center' }}
           >
             {METRIC_GROUPS.map((group) => {
               const isActive = activeGroups.includes(group.id);
@@ -308,6 +297,13 @@ export const AnalysisDashboard: React.FC = () => {
                       <h3 className="text-sm font-bold text-slate-700">{group.title}趋势分析</h3>
                     </div>
                     <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => setExpandedChart(groupId)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        title="放大查看"
+                      >
+                        <Maximize2 size={16} />
+                      </button>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div> 核心指标
                       </div>
@@ -377,105 +373,6 @@ export const AnalysisDashboard: React.FC = () => {
               );
             })}
           </div>
-          {/* 可视化趋势区 */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <TrendingUp size={18} className="text-blue-500" />
-                <h3 className="text-sm font-bold text-slate-700">多维分析看板</h3>
-                <div className="flex gap-2 ml-4">
-                  {activeGroups.map(id => (
-                    <span key={id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold border border-blue-100">
-                      {METRIC_GROUPS.find(g => g.id === id)?.title}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                  <div className="w-3 h-3 bg-blue-500 rounded"></div> 左轴: 数值型 (柱状)
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div> 右轴: 比率/分值 (波浪)
-                </div>
-              </div>
-            </div>
-
-            <div className="h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={currentChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} />
-                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)', padding: '16px' }}
-                    itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
-                    labelStyle={{ fontSize: '12px', fontWeight: 'black', color: '#1e293b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}
-                  />
-                  <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '20px', fontWeight: 'bold' }} />
-                  
-                  {/* 联动渲染逻辑 */}
-                  {activeGroups.includes('results') && (
-                    <>
-                      {compareMode === 'overall' && (
-                        <Bar yAxisId="left" name="拨打总量" dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
-                      )}
-                      {compareMode === 'detailed' && (
-                        <>
-                          <Bar yAxisId="left" name="已接听" dataKey="connected" stackId="a" fill="#1e3a8a" barSize={30} />
-                          <Bar yAxisId="left" name="响铃未接" dataKey="busy" stackId="a" fill="#1d4ed8" barSize={30} />
-                          <Bar yAxisId="left" name="空号" dataKey="empty" stackId="a" fill="#2563eb" barSize={30} />
-                          <Bar yAxisId="left" name="关机" dataKey="poweroff" stackId="a" fill="#3b82f6" barSize={30} />
-                          <Bar yAxisId="left" name="停机" dataKey="suspended" stackId="a" fill="#60a5fa" radius={[4, 4, 0, 0]} barSize={30} />
-                        </>
-                      )}
-                    </>
-                  )}
-                  {activeGroups.includes('tags') && (
-                    <>
-                      {compareMode === 'overall' && (
-                        <Bar yAxisId="left" name="标签总量" dataKey="tags" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={30} />
-                      )}
-                      {compareMode === 'detailed' && (
-                        <>
-                          <Bar yAxisId="left" name="自定义标签 1" dataKey="tag1" stackId="b" fill="#f43f5e" barSize={30} />
-                          <Bar yAxisId="left" name="自定义标签 2" dataKey="tag2" stackId="b" fill="#fb7185" barSize={30} />
-                          <Bar yAxisId="left" name="自定义标签 3" dataKey="tag3" stackId="b" fill="#fda4af" radius={[4, 4, 0, 0]} barSize={30} />
-                        </>
-                      )}
-                    </>
-                  )}
-                  {activeGroups.includes('efficiency') && (
-                    <>
-                      <Area yAxisId="right" name="接通率" type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} fillOpacity={0.1} fill="#10b981" />
-                      {compareMode === 'detailed' && (
-                        <>
-                          <Line yAxisId="left" name="总通话时长(h)" type="monotone" dataKey="totalDuration" stroke="#059669" strokeWidth={2} dot={false} />
-                          <Line yAxisId="right" name="平均时长(s)" type="monotone" dataKey="avgDuration" stroke="#34d399" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                        </>
-                      )}
-                    </>
-                  )}
-                  {activeGroups.includes('scores') && (
-                    <>
-                      {compareMode === 'overall' && (
-                        <Area yAxisId="right" name="综合得分" type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} fillOpacity={0.1} fill="#6366f1" />
-                      )}
-                      {compareMode === 'detailed' && (
-                        <>
-                          <Area yAxisId="right" name="评分维度 1" type="monotone" dataKey="s1" stroke="#6366f1" strokeWidth={2} fillOpacity={0.05} fill="#6366f1" />
-                          <Area yAxisId="right" name="评分维度 2" type="monotone" dataKey="s2" stroke="#818cf8" strokeWidth={2} fillOpacity={0.05} fill="#818cf8" />
-                          <Area yAxisId="right" name="评分维度 3" type="monotone" dataKey="s3" stroke="#a5b4fc" strokeWidth={2} fillOpacity={0.05} fill="#a5b4fc" />
-                        </>
-                      )}
-                    </>
-                  )}
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
           {/* 联动详情区 */}
           <div className="space-y-8">
             {activeGroups.includes('tags') && (
@@ -736,6 +633,91 @@ export const AnalysisDashboard: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* 放大查看弹窗 */}
+      {expandedChart && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className={cn("p-2 rounded-lg text-white", 
+                  expandedChart === 'results' ? "bg-blue-500" : 
+                  expandedChart === 'efficiency' ? "bg-emerald-500" : 
+                  expandedChart === 'tags' ? "bg-rose-500" : "bg-indigo-500"
+                )}>
+                  {METRIC_GROUPS.find(g => g.id === expandedChart)?.icon}
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">{METRIC_GROUPS.find(g => g.id === expandedChart)?.title}趋势分析</h3>
+              </div>
+              <button 
+                onClick={() => setExpandedChart(null)}
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-10 h-[600px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={currentChartData}>
+                  <defs>
+                    <linearGradient id={`color-expanded-${expandedChart}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={expandedChart === 'results' ? "#3b82f6" : expandedChart === 'efficiency' ? "#10b981" : expandedChart === 'tags' ? "#f43f5e" : "#6366f1"} stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor={expandedChart === 'results' ? "#3b82f6" : expandedChart === 'efficiency' ? "#10b981" : expandedChart === 'tags' ? "#f43f5e" : "#6366f1"} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                  />
+                  <Legend verticalAlign="top" height={48} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                  {compareMode === 'overall' ? (
+                    <Area 
+                      type="monotone" 
+                      dataKey={expandedChart === 'results' ? 'total' : expandedChart === 'efficiency' ? 'rate' : expandedChart === 'tags' ? 'tags' : 'score'} 
+                      stroke={expandedChart === 'results' ? "#3b82f6" : expandedChart === 'efficiency' ? "#10b981" : expandedChart === 'tags' ? "#f43f5e" : "#6366f1"} 
+                      fillOpacity={1} 
+                      fill={`url(#color-expanded-${expandedChart})`} 
+                      strokeWidth={4}
+                    />
+                  ) : (
+                    <>
+                      {expandedChart === 'results' && (
+                        <>
+                          <Area name="已接听" type="monotone" dataKey="connected" stackId="1" stroke="#1e3a8a" fill="#1e3a8a" fillOpacity={0.6} />
+                          <Area name="响铃未接" type="monotone" dataKey="busy" stackId="1" stroke="#1d4ed8" fill="#1d4ed8" fillOpacity={0.6} />
+                          <Area name="空号" type="monotone" dataKey="empty" stackId="1" stroke="#2563eb" fill="#2563eb" fillOpacity={0.6} />
+                          <Area name="关机" type="monotone" dataKey="poweroff" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                          <Area name="停机" type="monotone" dataKey="suspended" stackId="1" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.6} />
+                        </>
+                      )}
+                      {expandedChart === 'tags' && (
+                        <>
+                          <Area name="标签 1" type="monotone" dataKey="tag1" stackId="1" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.6} />
+                          <Area name="标签 2" type="monotone" dataKey="tag2" stackId="1" stroke="#fb7185" fill="#fb7185" fillOpacity={0.6} />
+                          <Area name="标签 3" type="monotone" dataKey="tag3" stackId="1" stroke="#fda4af" fill="#fda4af" fillOpacity={0.6} />
+                        </>
+                      )}
+                      {expandedChart === 'scores' && (
+                        <>
+                          <Area name="维度 1" type="monotone" dataKey="s1" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} strokeWidth={3} />
+                          <Area name="维度 2" type="monotone" dataKey="s2" stroke="#818cf8" fill="#818cf8" fillOpacity={0.2} strokeWidth={3} />
+                          <Area name="维度 3" type="monotone" dataKey="s3" stroke="#a5b4fc" fill="#a5b4fc" fillOpacity={0.2} strokeWidth={3} />
+                        </>
+                      )}
+                      {expandedChart === 'efficiency' && (
+                        <Area name="接通率" type="monotone" dataKey="rate" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={4} />
+                      )}
+                    </>
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

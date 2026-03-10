@@ -551,7 +551,7 @@ const TemplateEditView = ({ template, onBack, isTesting, setIsTesting }: any) =>
 
   const totalWeight = criteria.reduce((sum, d) => sum + d.weight, 0);
 
-  // --- 权重自动平分逻辑 ---
+  // --- 分值自动平分逻辑 ---
   const rebalanceWeights = (currentCriteria: any[], changedId?: string, newWeight?: number) => {
     if (currentCriteria.length === 0) return [];
     
@@ -577,7 +577,7 @@ const TemplateEditView = ({ template, onBack, isTesting, setIsTesting }: any) =>
 
     // 🌟 防呆拦截逻辑：每个未锁定的维度至少需要 1% 的空间
     if (unlockedDimensions.length > 0 && remaining < unlockedDimensions.length * 1) {
-      setWeightError("剩余权重不足以分配给其他维度，请调低已锁定项的占比或取消部分维度。");
+      setWeightError("剩余分值不足以分配给其他维度，请调低已锁定项的占比或取消部分维度。");
       return currentCriteria; 
     }
 
@@ -666,7 +666,7 @@ const TemplateEditView = ({ template, onBack, isTesting, setIsTesting }: any) =>
           </button>
           <div>
             <h3 className="text-lg font-bold text-slate-800">编辑模板: {template.name}</h3>
-            <p className="text-xs text-slate-400">配置模板的维度权重及测试评分逻辑</p>
+            <p className="text-xs text-slate-400">配置模板的维度分值及测试评分逻辑</p>
           </div>
         </div>
         <div className="flex gap-3">
@@ -679,11 +679,11 @@ const TemplateEditView = ({ template, onBack, isTesting, setIsTesting }: any) =>
           <button onClick={onBack} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">取消</button>
           <button onClick={onBack} className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-6 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-slate-50 transition-all">
             <Save size={18} />
-            <span>存为草稿</span>
+            <span>保存</span>
           </button>
           <button onClick={onBack} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-700 transition-all">
             <ShieldCheck size={18} />
-            <span>保存并发布</span>
+            <span>发布</span>
           </button>
         </div>
       </div>
@@ -720,7 +720,7 @@ const TemplateEditView = ({ template, onBack, isTesting, setIsTesting }: any) =>
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <Settings2 size={20} className="text-blue-500" />
-                  <h3 className="text-lg font-bold text-slate-800">权重策略引擎</h3>
+                  <h3 className="text-lg font-bold text-slate-800">分值策略引擎</h3>
                 </div>
                 <div className={cn(
                   "px-4 py-2 rounded-xl text-sm font-black font-mono flex items-center gap-3",
@@ -765,7 +765,6 @@ const TemplateEditView = ({ template, onBack, isTesting, setIsTesting }: any) =>
                             item.locked ? "bg-blue-600 text-white shadow-lg" : "bg-white border border-slate-200 text-slate-400 hover:text-blue-500"
                           )}
                         >
-                          {item.locked ? <Lock size={12} /> : <Unlock size={12} />}
                           <span>{item.locked ? "已锁定" : "锁定"}</span>
                         </button>
                         <button 
